@@ -1,0 +1,652 @@
+/* --- Knowledge Graph Explorer — dark biotech dashboard --- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #0b1220;
+  color: #e2e8f0;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a {
+  color: #22d3ee;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+/* Header */
+.header {
+  border-bottom: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.9);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+.header-tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #22d3ee;
+  margin: 0 0 0.25rem;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.header-desc {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+/* Main layout */
+.main {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr 2fr 1fr;
+  }
+}
+
+.panel {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2,
+.panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: #e2e8f0;
+}
+
+.panel h3 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+/* Error banner */
+.error-banner {
+  background: rgba(127, 29, 29, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed #1f2937;
+  border-radius: 0.75rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.5);
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: #0891b2;
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.drop-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto 0.75rem;
+  color: rgba(34, 211, 238, 0.7);
+}
+
+.drop-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.drop-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+
+.selected-file {
+  font-size: 0.75rem;
+  color: #22d3ee;
+  margin-top: 0.5rem;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #0891b2;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+..btn-primary:hover:not(:disabled) {
+  background: #06b6d4;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 0.65rem 1rem;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  background: #1f2937;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #334155;
+}
+
+.pubmed-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.pubmed-search input {
+  flex: 1;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid #1f2937;
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+}
+
+.pubmed-results {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.article-card {
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid #1f2937;
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.article-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.article-type,
+.article-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.article-card h4 {
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.article-link,
+.article-select {
+  border: none;
+  background: #0891b2;
+  color: #fff;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.article-link:hover,
+.article-select:hover {
+  background: #06b6d4;
+}
+
+.article-select {
+  justify-self: flex-end;
+}
+
+.article-abstract {
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  color: #cbd5e1;
+}
+
+.article-abstract p {
+  margin: 0.5rem 0 0;
+  line-height: 1.55;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 0;
+}
+
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 4px solid rgba(34, 211, 238, 0.3);
+  border-top-color: #22d3ee;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.stat-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.stat-card dt {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.stat-card dd {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #67e8f9;
+}
+
+/* Legend */
+.legend-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.legend-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-subtitle {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.legend-list--compact {
+  font-size: 0.75rem;
+}
+
+.legend-list--compact li {
+  margin-bottom: 0.35rem;
+}
+
+/* Shape previews matching Cytoscape node shapes */
+.legend-shape {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background: var(--legend-color);
+  border: 2px solid var(--legend-border);
+}
+
+.legend-shape--disease {
+  border-radius: 4px;
+}
+
+.legend-shape--gene,
+.legend-shape--default {
+  border-radius: 50%;
+}
+
+.legend-shape--compound {
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.legend-shape--pathway {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border: none;
+  background: var(--legend-color);
+}
+
+.legend-shape--protein {
+  border-radius: 2px;
+}
+
+.legend-edge {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Search */
+.search-wrap {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.search-wrap input {
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #1f2937;
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+  font-size: 0.875rem;
+}
+
+.search-wrap input:focus {
+  outline: none;
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 1px #06b6d4;
+}
+
+.search-wrap input:disabled {
+  opacity: 0.5;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Autocomplete dropdown */
+.search-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  background: #111827;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.search-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.search-suggestion-item:hover,
+.search-suggestion-item.active {
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.search-suggestion-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.search-suggestion-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e2e8f0;
+}
+
+.search-suggestion-text mark {
+  background: rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.search-suggestion-type {
+  font-size: 0.7rem;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+/* Graph */
+.graph-panel {
+  min-height: 460px;
+  padding: 0.75rem;
+  position: relative;
+}
+
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.graph-toolbar-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-right: 0.25rem;
+}
+
+.graph-toolbar button {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #334155;
+  border-radius: 0.375rem;
+  background: #1e293b;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.graph-toolbar button:hover {
+  background: #334155;
+  border-color: #22d3ee;
+  color: #67e8f9;
+}
+
+.graph-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  border: 1px dashed #1f2937;
+  border-radius: 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+#cy {
+  width: 100%;
+  height: 460px;
+  border-radius: 0.5rem;
+  border: 1px solid #1e3a5f;
+  /* Subtle biomedical grid background */
+  background-color: #0a0f1a;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.04) 0%, transparent 55%),
+    linear-gradient(rgba(30, 58, 95, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 58, 95, 0.15) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+
+/* Sidebar */
+.sidebar-header {
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #67e8f9;
+}
+
+.sidebar-content {
+  font-size: 0.875rem;
+}
+
+.detail-block {
+  margin-bottom: 1rem;
+}
+
+.detail-block .label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 0.25rem;
+}
+
+.detail-block .value {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+}
+
+.rel-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.rel-list li {
+  background: rgba(30, 41, 59, 0.6);
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.footer {
+  border-top: 1px solid #1f2937;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.75rem;
+  color: #475569;
+}
+

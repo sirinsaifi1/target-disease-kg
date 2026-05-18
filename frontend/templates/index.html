@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Biomedical Literature Intelligence Explorer</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="page-header">
+        <div>
+          <p class="tagline">Biomedical Literature Intelligence</p>
+          <h1>Knowledge Graph Explorer</h1>
+        </div>
+        <p class="hero-copy">
+          Search PubMed by disease, gene, drug, or keyword to explore evidence, contradictions, timelines, and research gaps.
+        </p>
+      </header>
+
+      <main class="layout-grid">
+        <aside class="panel panel-left">
+          <section class="panel-block">
+            <h2>Smart PubMed search</h2>
+            <label class="field-label" for="search-term">Search term</label>
+            <input id="search-term" type="search" placeholder="e.g. Alzheimer disease" />
+
+            <label class="field-label" for="entity-type">Entity filter</label>
+            <select id="entity-type">
+              <option value="disease">Disease</option>
+              <option value="gene">Gene</option>
+              <option value="drug">Drug</option>
+              <option value="keyword">Keyword</option>
+            </select>
+
+            <div class="inline-fields">
+              <div>
+                <label class="field-label" for="min-year">From year</label>
+                <input id="min-year" type="number" min="1900" max="2026" placeholder="2015" />
+              </div>
+              <div>
+                <label class="field-label" for="max-year">To year</label>
+                <input id="max-year" type="number" min="1900" max="2026" placeholder="2025" />
+              </div>
+            </div>
+
+            <button id="search-button" class="btn-primary" type="button">Build literature graph</button>
+
+            <div id="status-banner" class="status-banner hidden"></div>
+          </section>
+
+          <section class="panel-block findings-block">
+            <h3>Top findings</h3>
+            <ul id="findings-list" class="findings-list">
+              <li>Search a topic to surface strongest evidence, contradictions, and key papers.</li>
+            </ul>
+          </section>
+
+          <section class="panel-block stats-block">
+            <h3>Graph summary</h3>
+            <div class="stats-grid" id="stats-grid">
+              <div class="stat-card">
+                <span class="stat-label">Nodes</span>
+                <strong id="stat-nodes">0</strong>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Edges</span>
+                <strong id="stat-edges">0</strong>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Papers</span>
+                <strong id="stat-papers">0</strong>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Years</span>
+                <strong id="stat-years">—</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-block insight-block">
+            <h3>Research insights</h3>
+            <ul id="insight-list" class="insight-list">
+              <li>Search a topic to see evidence strengths and gaps.</li>
+            </ul>
+          </section>
+        </aside>
+
+        <section class="panel panel-center">
+          <div class="graph-header">
+            <div>
+              <h2>Literature graph</h2>
+              <p class="muted">Click nodes to inspect paper metadata, evidence, and classification.</p>
+            </div>
+            <div class="graph-controls">
+              <button id="btn-fit" type="button">Fit</button>
+              <button id="btn-zoom-in" type="button">+</button>
+              <button id="btn-zoom-out" type="button">−</button>
+              <select id="layout-select" class="layout-select">
+                <option value="fcose">fcose</option>
+                <option value="concentric">concentric</option>
+                <option value="breadthfirst">breadthfirst</option>
+                <option value="cose-bilkent">cose-bilkent</option>
+              </select>
+            </div>
+          </div>
+          <div id="graph-placeholder" class="graph-placeholder">Run a search to visualize a PubMed literature graph.</div>
+          <div class="show-more-bar">
+            <button id="show-more-btn" class="btn-secondary hidden" type="button">Show more nodes</button>
+          </div>
+          <div id="cy" class="graph-container hidden"></div>
+        </section>
+
+        <aside class="panel panel-right">
+          <section class="panel-block">
+            <h3>Node details</h3>
+            <div id="node-detail" class="detail-panel">
+              <p class="muted">Select a node to see detailed metadata and relationship evidence.</p>
+            </div>
+          </section>
+
+          <section class="panel-block timeline-block">
+            <h3>Timeline evolution</h3>
+            <div id="timeline-chart" class="timeline-chart">
+              <p class="muted">Search data will populate the timeline chart.</p>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cose-base@2.2.0/cose-base.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-fcose@2.2.0/cytoscape-fcose.min.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/graph.js"></script>
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowledge Graph Explorer</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <!-- Page header -->
+    <header class="header">
+      <div>
+        <p class="header-tag">Target–Disease Hypothesis</p>
+        <h1>Knowledge Graph Explorer</h1>
+      </div>
+      <p class="header-desc">
+        Upload biomedical relationships as CSV and explore an interactive
+        knowledge graph.
+      </p>
+    </header>
+
+    <main class="main">
+      <!-- Error message (hidden until needed) -->
+      <div id="error-banner" class="error-banner hidden" role="alert"></div>
+
+      <div class="grid">
+        <!-- Left column: upload, stats, legend -->
+        <aside class="column column-left">
+          <section class="panel">
+            <h2>Data upload</h2>
+
+            <!-- Drag and drop zone -->
+            <div
+              id="drop-zone"
+              class="drop-zone"
+              tabindex="0"
+              role="button"
+              aria-label="Upload CSV file"
+            >
+              <svg
+                class="drop-icon"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              <p class="drop-title">Drag & drop your biomedical CSV here</p>
+              <p class="drop-hint">
+                Columns: source_type, source, target_type, target, relationship
+              </p>
+              <p id="selected-file" class="selected-file hidden"></p>
+            </div>
+
+            <input
+              id="file-input"
+              type="file"
+              accept=".csv"
+              class="hidden"
+            />
+
+            <button id="upload-btn" type="button" class="btn-primary">
+              Choose CSV &amp; upload
+            </button>
+
+            <!-- Loading spinner -->
+            <div id="loading" class="loading hidden">
+              <div class="spinner" role="status" aria-label="Loading"></div>
+              <p>Building knowledge graph…</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>PubMed disease search</h3>
+            <div class="pubmed-search">
+              <label for="pubmed-query" class="sr-only">PubMed search</label>
+              <input
+                id="pubmed-query"
+                type="search"
+                placeholder="Enter disease name or PMID"
+                autocomplete="off"
+              />
+              <button id="pubmed-search-btn" type="button" class="btn-secondary">
+                Search
+              </button>
+            </div>
+            <div id="pubmed-results" class="pubmed-results">
+              <p class="muted">Search a disease term to build a PubMed graph automatically.</p>
+            </div>
+          </section>
+
+          <!-- Graph statistics -->
+          <section class="panel" id="stats-panel">
+            <h3>Graph statistics</h3>
+            <p id="stats-empty" class="muted">Upload a CSV to see stats</p>
+            <dl id="stats-grid" class="stats-grid hidden"></dl>
+          </section>
+
+          <!-- Node type legend -->
+          <section class="panel" id="legend-panel">
+            <h3>Node types</h3>
+            <ul id="legend-list" class="legend-list"></ul>
+            <h3 class="legend-subtitle">Relationships</h3>
+            <ul id="legend-relationships" class="legend-list legend-list--compact"></ul>
+          </section>
+        </aside>
+
+        <!-- Center: search + graph -->
+        <section class="column column-center">
+          <div class="search-wrap">
+            <label for="node-search" class="sr-only">Search nodes</label>
+            <input
+              id="node-search"
+              type="search"
+              placeholder="Search nodes by name…"
+              disabled
+              autocomplete="off"
+              aria-autocomplete="list"
+              aria-controls="search-suggestions"
+            />
+            <ul
+              id="search-suggestions"
+              class="search-suggestions hidden"
+              role="listbox"
+              aria-label="Node suggestions"
+            ></ul>
+            <svg
+              class="search-icon"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
+          <section class="panel graph-panel">
+            <div id="graph-toolbar" class="graph-toolbar hidden">
+              <span class="graph-toolbar-label">Graph</span>
+              <button type="button" id="btn-fit" title="Fit to screen">Fit</button>
+              <button type="button" id="btn-zoom-in" title="Zoom in">+</button>
+              <button type="button" id="btn-zoom-out" title="Zoom out">−</button>
+              <button type="button" id="btn-relayout" title="Re-run layout">Layout</button>
+            </div>
+            <div id="graph-placeholder" class="graph-placeholder">
+              Your knowledge graph will appear here after upload
+            </div>
+            <div id="cy" class="cy hidden"></div>
+          </section>
+        </section>
+
+        <!-- Right: node details sidebar -->
+        <aside class="column column-right">
+          <section class="panel sidebar" id="node-sidebar">
+            <div class="sidebar-header">
+              <h2>Node details</h2>
+              <p class="muted">Click a node in the graph</p>
+            </div>
+            <div id="sidebar-content" class="sidebar-content">
+              <p class="muted">
+                Select a node to see its name, type, connections, and
+                relationships.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="footer">
+      API docs:
+      <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer"
+        >localhost:8000/docs</a
+      >
+    </footer>
+
+    <!-- Libraries from CDN (no npm required for frontend) -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/layout-base@2.0.1/layout-base.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cose-base@2.2.0/cose-base.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.min.js"></script>
+
+    <!-- App scripts (order matters) -->
+    <script src="js/api.js"></script>
+    <script src="js/graph.js"></script>
+    <script src="js/searchAutocomplete.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,413 @@
+/**
+ * Main app — wires upload UI, API, graph, stats, and sidebar.
+ */
+
+// In-memory state
+let graphElements = null;
+let graphSummary = null;
+let selectedFile = null;
+
+// DOM references
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
+const uploadBtn = document.getElementById("upload-btn");
+const loadingEl = document.getElementById("loading");
+const errorBanner = document.getElementById("error-banner");
+const selectedFileEl = document.getElementById("selected-file");
+const searchInput = document.getElementById("node-search");
+const pubmedQueryInput = document.getElementById("pubmed-query");
+const pubmedSearchBtn = document.getElementById("pubmed-search-btn");
+const pubmedResultsEl = document.getElementById("pubmed-results");
+const sidebarContent = document.getElementById("sidebar-content");
+
+initSearchAutocomplete(searchInput);
+
+// --- Error display ---
+function showError(message) {
+  errorBanner.textContent = message;
+  errorBanner.classList.remove("hidden");
+}
+
+function hideError() {
+  errorBanner.classList.add("hidden");
+}
+
+async function fetchPubmedResults(query) {
+  if (!query?.trim?.()) {
+    throw new Error("Enter a PMID or PubMed search term.");
+  }
+
+  const trimmed = query.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const response = await axios.get(`${API_BASE_URL}/api/pubmed/${trimmed}`);
+    return { direct: true, article: response.data };
+  }
+
+  const response = await axios.get(`${API_BASE_URL}/api/pubmed/disease_graph`, {
+    params: { disease: trimmed, max_results: 12 },
+    timeout: 60000,
+  });
+  return { direct: false, graph: response.data };
+}
+
+function renderPubmedArticle(article) {
+  if (!pubmedResultsEl) return;
+
+  const authors = Array.isArray(article.authors) ? article.authors.join(", ") : "Unknown";
+  pubmedResultsEl.innerHTML = `
+    <div class="article-card article-card--detail">
+      <div class="article-card-header">
+        <div>
+          <p class="article-type">PubMed ID: ${escapeHtml(article.pubmed_id)}</p>
+          <h4>${escapeHtml(article.title || "Untitled")}</h4>
+        </div>
+        <a href="${escapeHtml(article.url)}" target="_blank" rel="noreferrer" class="article-link">View on PubMed</a>
+      </div>
+      <p class="article-meta">${escapeHtml(article.journal || "Unknown journal")} • ${escapeHtml(article.pub_date || "Unknown date")}</p>
+      <p class="article-meta">Authors: ${escapeHtml(authors)}</p>
+      ${article.abstract ? `<div class="article-abstract"><strong>Abstract</strong><p>${escapeHtml(article.abstract)}</p></div>` : ""}
+    </div>
+  `;
+}
+
+function renderPubmedSearchResults(results) {
+  if (!pubmedResultsEl) return;
+  if (!results || results.length === 0) {
+    pubmedResultsEl.innerHTML = '<p class="muted">No PubMed articles found for this query.</p>';
+    return;
+  }
+
+  pubmedResultsEl.innerHTML = results
+    .map(
+      (article) => `
+      <div class="article-card">
+        <div>
+          <p class="article-type">PMID ${escapeHtml(article.pubmed_id)}</p>
+          <h4>${escapeHtml(article.title || "Untitled")}</h4>
+          <p class="article-meta">${escapeHtml(article.journal || "Unknown journal")} • ${escapeHtml(article.pub_date || "Unknown date")}</p>
+        </div>
+        <button type="button" class="article-select" data-pmid="${escapeHtml(article.pubmed_id)}">
+          View details
+        </button>
+      </div>`
+    )
+    .join("");
+
+  pubmedResultsEl.querySelectorAll(".article-select").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const pmid = event.currentTarget.dataset.pmid;
+      if (!pmid) return;
+      setPubmedLoading(true);
+      hideError();
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/pubmed/${pmid}`);
+        renderPubmedArticle(response.data);
+      } catch (err) {
+        const detail = err?.response?.data?.detail || err.message;
+        showError(`PubMed lookup failed: ${detail}`);
+      } finally {
+        setPubmedLoading(false);
+      }
+    });
+  });
+}
+
+function setPubmedLoading(isLoading) {
+  if (!pubmedSearchBtn) return;
+  pubmedSearchBtn.disabled = isLoading;
+  pubmedQueryInput?.toggleAttribute("disabled", isLoading);
+  pubmedResultsEl?.classList.toggle("loading", isLoading);
+}
+
+async function handlePubmedSearch() {
+  if (!pubmedQueryInput) return;
+  const query = pubmedQueryInput.value;
+  if (!query.trim()) {
+    showError("Enter a PubMed query or PMID.");
+    return;
+  }
+
+  setPubmedLoading(true);
+  hideError();
+
+  try {
+    const result = await fetchPubmedResults(query);
+    if (result.direct) {
+      renderPubmedArticle(result.article);
+    } else {
+      renderPubmedSearchResults(result.search.results);
+    }
+  } catch (err) {
+    const detail = err?.response?.data?.detail || err.message;
+    showError(`PubMed request failed: ${detail}`);
+  } finally {
+    setPubmedLoading(false);
+  }
+}
+
+function renderPubmedSearchResults(results) {
+  if (!pubmedResultsEl) return;
+  if (!results || results.length === 0) {
+    pubmedResultsEl.innerHTML = '<p class="muted">No PubMed articles found for this query.</p>';
+    return;
+  }
+
+  pubmedResultsEl.innerHTML = results
+    .map(
+      (article) => `
+      <div class="article-card">
+        <div>
+          <p class="article-type">PMID ${escapeHtml(article.pubmed_id)}</p>
+          <h4>${escapeHtml(article.title || "Untitled")}</h4>
+          <p class="article-meta">${escapeHtml(article.journal || "Unknown journal")} • ${escapeHtml(article.pub_date || "Unknown date")}</p>
+        </div>
+        <button type="button" class="article-select" data-pmid="${escapeHtml(article.pubmed_id)}">
+          View details
+        </button>
+      </div>`
+    )
+    .join("");
+
+  pubmedResultsEl.querySelectorAll(".article-select").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const pmid = event.currentTarget.dataset.pmid;
+      if (!pmid) return;
+      setPubmedLoading(true);
+      hideError();
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/pubmed/${pmid}`);
+        renderPubmedArticle(response.data);
+      } catch (err) {
+        const detail = err?.response?.data?.detail || err.message;
+        showError(`PubMed lookup failed: ${detail}`);
+      } finally {
+        setPubmedLoading(false);
+      }
+    });
+  });
+}
+
+async function handlePubmedSearch() {
+  if (!pubmedQueryInput) return;
+  const query = pubmedQueryInput.value;
+  if (!query.trim()) {
+    showError("Enter a PubMed query or PMID.");
+    return;
+  }
+
+  setPubmedLoading(true);
+  hideError();
+
+  try {
+    const result = await fetchPubmedResults(query);
+    if (result.direct) {
+      renderPubmedArticle(result.article);
+      return;
+    }
+
+    const graph = result.graph;
+    graphElements = graph.elements;
+    graphSummary = graph.summary;
+    renderStats(graphSummary);
+    renderLegend(graphSummary.unique_node_types);
+    renderGraph(graphElements, renderSidebar);
+    setSearchSuggestions(graphElements);
+    renderPubmedSearchResults(graph.articles);
+  } catch (err) {
+    const detail = err?.response?.data?.detail || err.message;
+    showError(`PubMed request failed: ${detail}`);
+  } finally {
+    setPubmedLoading(false);
+  }
+}
+
+// --- Loading state ---
+function setLoading(isLoading) {
+  loadingEl.classList.toggle("hidden", !isLoading);
+  uploadBtn.disabled = isLoading;
+  dropZone.style.pointerEvents = isLoading ? "none" : "auto";
+  dropZone.style.opacity = isLoading ? "0.6" : "1";
+}
+
+// --- Stats panel ---
+function renderStats(summary) {
+  const empty = document.getElementById("stats-empty");
+  const grid = document.getElementById("stats-grid");
+
+  if (!summary) {
+    empty.classList.remove("hidden");
+    grid.classList.add("hidden");
+    grid.innerHTML = "";
+    return;
+  }
+
+  empty.classList.add("hidden");
+  grid.classList.remove("hidden");
+
+  const items = [
+    ["Total nodes", summary.total_nodes],
+    ["Total edges", summary.total_edges],
+    ["Diseases", summary.diseases_count],
+    ["Genes", summary.genes_count],
+    ["Compounds", summary.compounds_count],
+    ["Pathways", summary.pathways_count],
+    ["Proteins", summary.proteins_count],
+  ];
+
+  grid.innerHTML = items
+    .map(
+      ([label, value]) => `
+    <div class="stat-card">
+      <dt>${label}</dt>
+      <dd>${value}</dd>
+    </div>`
+    )
+    .join("");
+}
+
+// --- Sidebar for selected node ---
+function renderSidebar(nodeId) {
+  if (!nodeId || !graphElements) {
+    sidebarContent.innerHTML =
+      '<p class="muted">Select a node to see its name, type, connections, and relationships.</p>';
+    return;
+  }
+
+  const details = getNodeDetails(nodeId, graphElements);
+  if (!details) return;
+
+  const color = getNodeColor(details.type);
+  const relHtml =
+    details.relationships.length === 0
+      ? '<p class="muted">No relationships</p>'
+      : `<ul class="rel-list">${details.relationships
+          .map((r) => `<li>${escapeHtml(r)}</li>`)
+          .join("")}</ul>`;
+
+  sidebarContent.innerHTML = `
+    <div class="detail-block">
+      <p class="label">Name</p>
+      <p class="value">${escapeHtml(details.name)}</p>
+    </div>
+    <div class="detail-block">
+      <p class="label">Type</p>
+      <span class="type-badge" style="background:${color}22;color:${color}">
+        <span class="legend-dot" style="background:${color}"></span>
+        ${escapeHtml(details.type)}
+      </span>
+    </div>
+    <div class="detail-block">
+      <p class="label">Connected nodes</p>
+      <p class="value" style="color:#67e8f9;font-size:1.5rem">${details.connectedCount}</p>
+    </div>
+    <div class="detail-block">
+      <p class="label">Relationships</p>
+      ${relHtml}
+    </div>
+  `;
+}
+
+/** Prevent XSS when inserting user CSV labels into HTML */
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// --- File handling ---
+function onFileChosen(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    showError("Please upload a .csv file");
+    return;
+  }
+  selectedFile = file;
+  selectedFileEl.textContent = "Selected: " + file.name;
+  selectedFileEl.classList.remove("hidden");
+  hideError();
+  // Auto-upload when file is chosen
+  doUpload(file);
+}
+
+async function doUpload(file) {
+  setLoading(true);
+  hideError();
+  searchInput.value = "";
+  searchInput.disabled = true;
+  setSearchSuggestions(null);
+
+  try {
+    const data = await uploadCsv(file);
+    graphElements = data.elements;
+    graphSummary = data.summary;
+
+    renderStats(graphSummary);
+    renderLegend(graphSummary.unique_node_types);
+    renderGraph(graphElements, renderSidebar);
+    setSearchSuggestions(graphElements);
+
+    searchInput.disabled = false;
+    searchInput.placeholder = "Search nodes by name…";
+  } catch (err) {
+    console.log(err);
+    let message = "Upload failed. Is the backend running on port 8000?";
+    if (err.response && err.response.data && err.response.data.detail) {
+      const d = err.response.data.detail;
+      message = typeof d === "string" ? d : JSON.stringify(d);
+    }
+    showError(message);
+    graphElements = null;
+    graphSummary = null;
+    setSearchSuggestions(null);
+    renderStats(null);
+  } finally {
+    setLoading(false);
+  }
+}
+
+pubmedSearchBtn?.addEventListener("click", handlePubmedSearch);
+pubmedQueryInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    handlePubmedSearch();
+  }
+});
+
+// --- Event listeners ---
+
+// Click drop zone or upload button opens file picker
+dropZone.addEventListener("click", () => fileInput.click());
+uploadBtn.addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", (e) => {
+  onFileChosen(e.target.files[0]);
+});
+
+// Drag and drop
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("drag-over");
+});
+
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("drag-over");
+});
+
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  onFileChosen(file);
+});
+
+// Keyboard: Enter on drop zone opens picker
+dropZone.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+// Initial legend (default types)
+renderLegend([]);
+
