@@ -360,6 +360,100 @@ button {
   height: 100%;
 }
 
+.evidence-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.evidence-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.95rem;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid #1f2937;
+}
+
+.evidence-card-main h4 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.evidence-card-main p {
+  margin: 0.35rem 0 0;
+}
+
+.evidence-card-actions {
+  display: grid;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.card-pmid {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.paper-snippet {
+  margin-top: 0.95rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.finding-link {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.finding-item {
+  border: 1px solid #1f2937;
+  border-radius: 0.85rem;
+  background: rgba(30, 41, 59, 0.78);
+  padding: 0.85rem 1rem;
+}
+
+.finding-link strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #e2e8f0;
+}
+
+.finding-link span {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.btn-secondary.small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+  text-decoration: none;
+}
+
+.btn-secondary.small:hover {
+  background: #1e293b;
+}
+
+#edge-tooltip {
+  pointer-events: none;
+}
+
 .timeline-labels {
   display: flex;
   justify-content: space-between;

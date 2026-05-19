@@ -14,10 +14,12 @@ class GraphEdge(BaseModel):
     id: str
     source: str
     target: str
-    label: str
-    confidence: Optional[int] = None
+    relationship: str
+    confidence_score: Optional[int] = None
     support_count: Optional[int] = None
     contradict_count: Optional[int] = None
+    uncertain_count: Optional[int] = None
+    evidence_links: Optional[List[Dict[str, Any]]] = None
     year: Optional[int] = None
 
 
@@ -35,3 +37,6 @@ class GraphResponse(BaseModel):
     elements: Dict[str, List[Dict[str, Any]]]
     summary: GraphSummary
     insights: List[str]
+    timeline: Optional[List[Dict[str, Any]]] = None
+    top_findings: Optional[List[Dict[str, Any]]] = None
+    papers: Optional[List[Dict[str, Any]]] = None

@@ -97,6 +97,150 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function getGraphElement(elementId) {
+  if (!currentGraph) {
+    return null;
+  }
+  const node = currentGraph.elements.nodes.find((node) => node.data.id === elementId);
+  if (node) {
+    return { type: "node", data: node.data };
+  }
+  const edge = currentGraph.elements.edges.find((edge) => edge.data.id === elementId);
+  if (edge) {
+    return { type: "edge", data: edge.data };
+  }
+  return null;
+}
+
+function getConnectedPapers(nodeId) {
+  if (!currentGraph) {
+    return [];
+  }
+  const relatedPaperIds = new Set();
+  currentGraph.elements.edges.forEach((edge) => {
+    if (edge.data.source === nodeId && edge.data.target.startsWith("Paper:")) {
+      relatedPaperIds.add(edge.data.target);
+    }
+    if (edge.data.target === nodeId && edge.data.source.startsWith("Paper:")) {
+      relatedPaperIds.add(edge.data.source);
+    }
+  });
+  return [...relatedPaperIds]
+    .map((paperId) => currentGraph.elements.nodes.find((node) => node.data.id === paperId))
+    .filter(Boolean)
+    .map((node) => node.data);
+}
+
+function renderEvidenceCards(papers) {
+  if (!papers || papers.length === 0) {
+    return `<p class="muted">No linked PubMed articles were found for this selection.</p>`;
+  }
+  return papers
+    .map((paper) => {
+      const classification = paper.classification ? paper.classification.replace(/_/g, " ") : "Evidence";
+      return `
+        <article class="evidence-card">
+          <div class="evidence-card-main">
+            <h4>${escapeHtml(paper.title || `PMID ${paper.pmid}`)}</h4>
+            <p class="muted">${escapeHtml(String(paper.year || "Unknown"))} · ${escapeHtml(paper.journal || "Unknown journal")}</p>
+            <p class="muted">${escapeHtml(String(classification))}</p>
+            <p class="paper-snippet">${escapeHtml(paper.abstract_snippet || "No abstract snippet available.")}</p>
+          </div>
+          <div class="evidence-card-actions">
+            <p class="card-pmid">PMID ${escapeHtml(paper.pmid)}</p>
+            <a href="${escapeHtml(paper.url || `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}/`)}" target="_blank" rel="noreferrer" class="btn-secondary small">Open in PubMed</a>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderFindings(findings) {
+  const findingsList = document.getElementById("findings-list");
+  if (!findingsList) {
+    return;
+  }
+  if (!findings || findings.length === 0) {
+    findingsList.innerHTML = `<li>Search a topic to surface strongest evidence, contradictions, and key papers.</li>`;
+    return;
+  }
+
+  findingsList.innerHTML = findings
+    .map((finding) => {
+      const relationshipLabel = finding.relationship.replace(/_/g, " ");
+      return `
+        <li class="finding-item" data-edge-id="${escapeHtml(finding.id)}">
+          <button type="button" class="finding-link">
+            <strong>${escapeHtml(finding.source.split(":")[1] || finding.source)} ↔ ${escapeHtml(finding.target.split(":")[1] || finding.target)}</strong>
+            <span>${escapeHtml(relationshipLabel)} · ${escapeHtml(String(finding.paper_count || 0))} papers</span>
+          </button>
+        </li>
+      `;
+    })
+    .join("");
+
+  findingsList.querySelectorAll(".finding-link").forEach((button) => {
+    button.addEventListener("click", () => {
+      const edgeId = button.closest(".finding-item")?.dataset.edgeId;
+      if (edgeId) {
+        renderDetails({ type: "edge", id: edgeId });
+      }
+    });
+  });
+}
+
+function renderDetails(selection) {
+  if (!selection) {
+    nodeDetail.innerHTML = `<p class="muted">Select a node or edge to inspect supporting PubMed evidence.</p>`;
+    return;
+  }
+
+  const element = getGraphElement(selection.id);
+  if (!element) {
+    nodeDetail.innerHTML = `<p class="muted">No details available for the selected item.</p>`;
+    return;
+  }
+
+  const { type, data } = element;
+  const lines = [];
+  lines.push(`<div class="detail-block"><p class="label">Name</p><p class="value">${escapeHtml(data.label)}</p></div>`);
+  lines.push(`<div class="detail-block"><p class="label">Type</p><p class="value"><span class="node-type-badge">${escapeHtml(type === "node" ? data.type : data.relationship || data.label)}</span></p></div>`);
+
+  if (type === "node") {
+    if (data.details) {
+      Object.entries(data.details).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === "") {
+          return;
+        }
+        const formattedKey = key.replace(/_/g, " ");
+        if (Array.isArray(value)) {
+          value = value.join(", ");
+        }
+        if (key === "url") {
+          value = `<a href="${escapeHtml(value)}" target="_blank" rel="noreferrer">Open PubMed</a>`;
+        }
+        lines.push(`<div class="detail-block"><p class="label">${escapeHtml(formattedKey)}</p><p class="value">${value}</p></div>`);
+      });
+    }
+    const connectedPapers = getConnectedPapers(data.id);
+    lines.push(`<div class="detail-block"><p class="label">Connected papers</p><p class="value">${connectedPapers.length} linked PubMed paper${connectedPapers.length === 1 ? "" : "s"}</p></div>`);
+    if (connectedPapers.length > 0) {
+      lines.push(`<div class="detail-block"><p class="label">Evidence summary</p><div class="evidence-grid">${renderEvidenceCards(connectedPapers)}</div></div>`);
+    }
+  } else if (type === "edge") {
+    lines.push(`<div class="detail-block"><p class="label">Relationship</p><p class="value">${escapeHtml(data.relationship || data.label)}</p></div>`);
+    lines.push(`<div class="detail-block"><p class="label">Confidence</p><p class="value">${escapeHtml(String(data.confidence_score ?? data.confidence ?? 0))}%</p></div>`);
+    lines.push(`<div class="detail-block"><p class="label">Support / Contradict</p><p class="value">${escapeHtml(String(data.support_count || 0))} supporting · ${escapeHtml(String(data.contradict_count || 0))} contradicting · ${escapeHtml(String(data.uncertain_count || 0))} uncertain</p></div>`);
+    lines.push(`<div class="detail-block"><p class="label">Evidence papers</p><p class="value">${escapeHtml(String((data.evidence_links || []).length))} PubMed paper${(data.evidence_links || []).length === 1 ? "" : "s"}</p></div>`);
+    if (data.evidence_links && data.evidence_links.length > 0) {
+      lines.push(`<div class="detail-block"><div class="evidence-grid">${renderEvidenceCards(data.evidence_links)}</div></div>`);
+    }
+  }
+
+  nodeDetail.innerHTML = lines.join("");
+}
+
 function getNodeMap(graph) {
   const map = new Map();
   graph.elements.nodes.forEach((node) => map.set(node.data.id, node));
@@ -241,6 +385,7 @@ async function executeSearch() {
     renderFilteredGraph();
     updateSummary(graph.summary);
     renderInsights(graph.insights);
+    renderFindings(graph.top_findings || []);
     updateTimeline(graph.timeline);
     renderDetails(null);
     showMoreButton.classList.remove("hidden");

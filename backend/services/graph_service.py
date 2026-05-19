@@ -77,21 +77,37 @@ class GraphService:
         edges: List[Dict[str, Any]] = []
         entity_stats: Dict[str, Dict[str, Any]] = {}
         timeline_counter: Dict[int, Counter] = defaultdict(Counter)
+        paper_index: Dict[str, Dict[str, Any]] = {}
 
         for idx, article in enumerate(articles, start=1):
-            paper_id = f"Paper:{article['pmid']}"
+            pmid = str(article["pmid"])
+            paper_id = f"Paper:{pmid}"
+            abstract_snippet = normalize_whitespace(article.get("abstract", ""))[:240]
+            paper_meta = {
+                "pmid": pmid,
+                "title": article.get("title", "")[:240] or f"PMID:{pmid}",
+                "abstract_snippet": abstract_snippet,
+                "year": article.get("year") or extract_year(article.get("pubdate", "")),
+                "journal": article.get("journal"),
+                "authors": article.get("authors", []),
+                "doi": article.get("doi"),
+                "url": article.get("url"),
+            }
+            paper_index[pmid] = paper_meta
             nodes[paper_id] = {
                 "data": {
                     "id": paper_id,
-                    "label": article["title"][:80] or f"PMID:{article['pmid']}",
+                    "label": paper_meta["title"],
                     "type": "Paper",
                     "details": {
-                        "pmid": article["pmid"],
-                        "journal": article.get("journal"),
-                        "year": article.get("year"),
-                        "authors": article.get("authors", []),
-                        "doi": article.get("doi"),
-                        "url": article.get("url"),
+                        "pmid": pmid,
+                        "title": paper_meta["title"],
+                        "journal": paper_meta["journal"],
+                        "year": paper_meta["year"],
+                        "authors": paper_meta["authors"],
+                        "doi": paper_meta["doi"],
+                        "url": paper_meta["url"],
+                        "abstract_snippet": paper_meta["abstract_snippet"],
                     },
                 }
             }
@@ -101,11 +117,20 @@ class GraphService:
                         "id": f"e-paper-{idx}",
                         "source": disease_node_id,
                         "target": paper_id,
+                        "relationship": "mentioned_in",
                         "label": "mentioned_in",
+                        "confidence_score": 100,
                         "confidence": 100,
                         "support_count": 1,
                         "contradict_count": 0,
-                        "year": article.get("year"),
+                        "uncertain_count": 0,
+                        "evidence_links": [
+                            {
+                                **paper_meta,
+                                "classification": "supports",
+                            }
+                        ],
+                        "year": paper_meta["year"],
                     }
                 }
             )
@@ -116,7 +141,7 @@ class GraphService:
             entities = self.nlp.extract_entities(article_text)
             classification = self.nlp.classify_sentence(article_text)
             keyword_strength = self.nlp.keyword_strength(article_text)
-            year = article.get("year") or extract_year(article.get("pubdate", ""))
+            year = paper_meta["year"]
 
             if year:
                 timeline_counter[year][classification] += 1
@@ -140,10 +165,15 @@ class GraphService:
                     "contradict_count": 0,
                     "uncertain_count": 0,
                     "articles": set(),
+                    "paper_ids": set(),
+                    "supporting_papers": [],
+                    "contradicting_papers": [],
+                    "uncertain_papers": [],
+                    "evidence_links": [],
                     "keywords": 0,
                     "year_counts": Counter(),
                 })
-                bucket["articles"].add(article["pmid"])
+                bucket["articles"].add(pmid)
                 bucket["keywords"] += keyword_strength
                 bucket["year_counts"][year or 0] += 1
                 classification_key = {
@@ -153,16 +183,38 @@ class GraphService:
                 }.get(classification, "uncertain_count")
                 bucket[classification_key] += 1
 
+                paper_link = {
+                    "pmid": pmid,
+                    "title": paper_meta["title"],
+                    "year": paper_meta["year"],
+                    "journal": paper_meta["journal"],
+                    "url": paper_meta["url"],
+                    "classification": classification,
+                }
+                if pmid not in bucket["paper_ids"]:
+                    bucket["paper_ids"].add(pmid)
+                    if classification == "supports":
+                        bucket["supporting_papers"].append(paper_link)
+                    elif classification == "contradicts":
+                        bucket["contradicting_papers"].append(paper_link)
+                    else:
+                        bucket["uncertain_papers"].append(paper_link)
+                    bucket["evidence_links"].append(paper_link)
+
                 edges.append(
                     {
                         "data": {
-                            "id": f"e-mention-{article['pmid']}-{entity_id}",
+                            "id": f"e-mention-{pmid}-{entity_id}",
                             "source": paper_id,
                             "target": entity_id,
+                            "relationship": "mentions",
                             "label": "mentions",
+                            "confidence_score": 75,
                             "confidence": 75,
                             "support_count": 1 if classification == "supports" else 0,
                             "contradict_count": 1 if classification == "contradicts" else 0,
+                            "uncertain_count": 1 if classification == "uncertain" else 0,
+                            "evidence_links": [paper_link],
                             "year": year,
                         }
                     }
@@ -191,10 +243,18 @@ class GraphService:
                         "id": f"e-rel-{source}-{target}",
                         "source": source,
                         "target": target,
+                        "relationship": classification,
                         "label": classification,
+                        "confidence_score": confidence,
                         "confidence": confidence,
                         "support_count": support,
                         "contradict_count": contradict,
+                        "uncertain_count": uncertain,
+                        "supporting_papers": stats["supporting_papers"],
+                        "contradicting_papers": stats["contradicting_papers"],
+                        "uncertain_papers": stats["uncertain_papers"],
+                        "evidence_links": stats["evidence_links"],
+                        "paper_count": article_count,
                         "year": max(stats["year_counts"].keys()) if stats["year_counts"] else None,
                     }
                 }
@@ -203,12 +263,15 @@ class GraphService:
         elements = {"nodes": list(nodes.values()), "edges": edges + relationship_edges}
         summary = self._build_summary(elements, timeline_counter)
         insights = self._build_insights(entity_stats, query)
+        top_findings = self._build_top_findings(relationship_edges)
 
         return {
             "elements": elements,
             "summary": summary,
             "insights": insights,
             "timeline": self._build_timeline(timeline_counter),
+            "top_findings": top_findings,
+            "papers": list(paper_index.values()),
         }
 
     def _calculate_confidence(
@@ -285,3 +348,27 @@ class GraphService:
             )
 
         return insights
+
+    def _build_top_findings(self, relationship_edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        sorted_edges = sorted(
+            relationship_edges,
+            key=lambda edge: (edge["data"].get("confidence_score", 0), edge["data"].get("support_count", 0), -edge["data"].get("contradict_count", 0)),
+            reverse=True,
+        )
+        top_findings = []
+        for edge in sorted_edges[:6]:
+            data = edge["data"]
+            top_findings.append(
+                {
+                    "id": data["id"],
+                    "source": data["source"],
+                    "target": data["target"],
+                    "relationship": data["relationship"],
+                    "confidence_score": data.get("confidence_score", 0),
+                    "support_count": data.get("support_count", 0),
+                    "contradict_count": data.get("contradict_count", 0),
+                    "paper_count": data.get("paper_count", 0),
+                    "evidence_links": data.get("evidence_links", []),
+                }
+            )
+        return top_findings

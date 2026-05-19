@@ -265,11 +265,25 @@ function renderStats(summary) {
     .join("");
 }
 
-// --- Sidebar for selected node ---
-function renderSidebar(nodeId) {
+// --- Sidebar for selected node or edge ---
+function renderSidebar(nodeId, edgeId) {
+  if (!nodeId && !edgeId) {
+    sidebarContent.innerHTML =
+      '<p class="muted">Select a node or edge to see its name, type, connections, and relationships.</p>';
+    return;
+  }
+
+  if (edgeId && graphElements) {
+    const edge = graphElements.edges.find((e) => e.data.id === edgeId);
+    if (edge) {
+      renderEdgeSidebar(edge);
+      return;
+    }
+  }
+
   if (!nodeId || !graphElements) {
     sidebarContent.innerHTML =
-      '<p class="muted">Select a node to see its name, type, connections, and relationships.</p>';
+      '<p class="muted">Select a node or edge to see its name, type, connections, and relationships.</p>';
     return;
   }
 
@@ -303,6 +317,73 @@ function renderSidebar(nodeId) {
     <div class="detail-block">
       <p class="label">Relationships</p>
       ${relHtml}
+    </div>
+  `;
+}
+
+function renderEdgeSidebar(edge) {
+  const data = edge.data;
+  const score = data.confidence_score ?? data.confidence ?? 0;
+  const support = data.support_count ?? 0;
+  const contradict = data.contradict_count ?? 0;
+  const uncertain = data.uncertain_count ?? 0;
+
+  const sourceNode = graphElements.nodes.find((n) => n.data.id === data.source);
+  const targetNode = graphElements.nodes.find((n) => n.data.id === data.target);
+  const sourceName = sourceNode ? sourceNode.data.label : data.source;
+  const targetName = targetNode ? targetNode.data.label : data.target;
+
+  const color =
+    score >= 70 ? "#22c55e" : score >= 40 ? "#f97316" : "#ef4444";
+
+  const evidenceHtml = [
+    support > 0
+      ? `<div class="evidence-item evidence-supporting">
+        <strong>Supporting: ${support}</strong>
+        <p class="muted">Evidence from PubMed</p>
+      </div>`
+      : "",
+    contradict > 0
+      ? `<div class="evidence-item evidence-contradicting">
+        <strong>Contradicting: ${contradict}</strong>
+        <p class="muted">Evidence from PubMed</p>
+      </div>`
+      : "",
+    uncertain > 0
+      ? `<div class="evidence-item evidence-uncertain">
+        <strong>Uncertain: ${uncertain}</strong>
+        <p class="muted">Mixed or unclear evidence</p>
+      </div>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  sidebarContent.innerHTML = `
+    <div class="detail-block">
+      <p class="label">Relationship</p>
+      <p class="value">${escapeHtml(String(data.label || data.relationship || "Edge"))}</p>
+    </div>
+    <div class="detail-block">
+      <p class="label">Entities</p>
+      <p class="value" style="font-size:0.9rem">
+        ${escapeHtml(sourceName)}<br>
+        <span style="color:#94a3b8">→ ${escapeHtml(data.label || "connects to")} →</span><br>
+        ${escapeHtml(targetName)}
+      </p>
+    </div>
+    <div class="detail-block">
+      <p class="label">Confidence Score</p>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <div style="width:64px;height:8px;background:#1f2937;border-radius:4px;overflow:hidden">
+          <div style="width:${score}%;height:100%;background:${color};transition:width 0.3s"></div>
+        </div>
+        <span style="font-weight:600;color:${color}">${score}%</span>
+      </div>
+    </div>
+    <div class="detail-block">
+      <p class="label">Evidence Summary</p>
+      ${evidenceHtml ? `<div style="display:grid;gap:0.5rem">${evidenceHtml}</div>` : '<p class="muted">No evidence data</p>'}
     </div>
   `;
 }

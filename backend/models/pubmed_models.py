@@ -7,6 +7,7 @@ class PubMedArticle(BaseModel):
     pmid: str
     title: str
     abstract: str
+    abstract_snippet: Optional[str] = None
     year: int
     journal: Optional[str] = None
     authors: List[str] = []

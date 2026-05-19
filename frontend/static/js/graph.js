@@ -18,9 +18,66 @@ const EDGE_COLORS = {
 let cyInstance = null;
 let graphState = null;
 let currentLayoutName = "fcose";
+let edgeTooltipElement = null;
 
 function setGraphLayout(layoutName) {
   currentLayoutName = layoutName;
+}
+
+function ensureEdgeTooltip() {
+  if (edgeTooltipElement) {
+    return;
+  }
+  edgeTooltipElement = document.createElement("div");
+  edgeTooltipElement.id = "edge-tooltip";
+  edgeTooltipElement.style.position = "fixed";
+  edgeTooltipElement.style.zIndex = "10000";
+  edgeTooltipElement.style.pointerEvents = "none";
+  edgeTooltipElement.style.padding = "0.65rem 0.85rem";
+  edgeTooltipElement.style.borderRadius = "0.85rem";
+  edgeTooltipElement.style.background = "rgba(15, 23, 42, 0.95)";
+  edgeTooltipElement.style.color = "#e2e8f0";
+  edgeTooltipElement.style.border = "1px solid rgba(148, 163, 184, 0.2)";
+  edgeTooltipElement.style.fontSize = "0.85rem";
+  edgeTooltipElement.style.lineHeight = "1.4";
+  edgeTooltipElement.style.display = "none";
+  edgeTooltipElement.style.maxWidth = "320px";
+  edgeTooltipElement.style.boxShadow = "0 20px 40px rgba(15, 23, 42, 0.45)";
+  document.body.appendChild(edgeTooltipElement);
+}
+
+function showEdgeTooltip(edge, event) {
+  if (!edge || !event) {
+    return;
+  }
+  ensureEdgeTooltip();
+  const data = edge.data();
+  const supportCount = data.support_count || 0;
+  const contradictCount = data.contradict_count || 0;
+  const paperCount = (data.evidence_links || []).length;
+  edgeTooltipElement.innerHTML = `
+    <strong>${escapeHtml(String(data.relationship || data.label || "Relationship"))}</strong><br>
+    Confidence: ${escapeHtml(String(data.confidence_score ?? data.confidence ?? 0))}%<br>
+    Support: ${supportCount} · Contradict: ${contradictCount}<br>
+    Evidence: ${paperCount} paper${paperCount === 1 ? "" : "s"}
+  `;
+  edgeTooltipElement.style.left = `${event.clientX + 14}px`;
+  edgeTooltipElement.style.top = `${event.clientY + 14}px`;
+  edgeTooltipElement.style.display = "block";
+}
+
+function moveEdgeTooltip(event) {
+  if (!edgeTooltipElement || edgeTooltipElement.style.display !== "block") {
+    return;
+  }
+  edgeTooltipElement.style.left = `${event.clientX + 14}px`;
+  edgeTooltipElement.style.top = `${event.clientY + 14}px`;
+}
+
+function hideEdgeTooltip() {
+  if (edgeTooltipElement) {
+    edgeTooltipElement.style.display = "none";
+  }
 }
 
 function getGraphInstance() {
@@ -266,7 +323,16 @@ function renderGraph(graph, onNodeSelect) {
 
   cyInstance.on("tap", "node", (evt) => {
     focusNode(evt.target);
-    onNodeSelect(evt.target.id());
+    if (typeof onSelection === "function") {
+      onSelection({ type: "node", id: evt.target.id() });
+    }
+  });
+
+  cyInstance.on("tap", "edge", (evt) => {
+    focusNode(evt.target);
+    if (typeof onSelection === "function") {
+      onSelection({ type: "edge", id: evt.target.id() });
+    }
   });
 
   cyInstance.on("dblclick", "node", () => {
@@ -275,7 +341,9 @@ function renderGraph(graph, onNodeSelect) {
 
   cyInstance.on("cxttap", "node", (evt) => {
     collapseNeighborhood(evt.target);
-    onNodeSelect(evt.target.id());
+    if (typeof onSelection === "function") {
+      onSelection({ type: "node", id: evt.target.id() });
+    }
   });
 
   cyInstance.on("mouseover", "node", (evt) => {
@@ -290,6 +358,18 @@ function renderGraph(graph, onNodeSelect) {
     if (!node.data("important")) {
       node.data("displayLabel", "");
     }
+  });
+
+  cyInstance.on("mouseover", "edge", (evt) => {
+    showEdgeTooltip(evt.target, evt.originalEvent);
+  });
+
+  cyInstance.on("mousemove", "edge", (evt) => {
+    moveEdgeTooltip(evt.originalEvent);
+  });
+
+  cyInstance.on("mouseout", "edge", () => {
+    hideEdgeTooltip();
   });
 
   cyInstance.on("layoutstop", () => {

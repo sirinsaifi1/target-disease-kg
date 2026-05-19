@@ -2,38 +2,51 @@
  * Cytoscape graph — biomedical styling, layouts, and interactions.
  */
 
-// Fill + border colors per entity type (bioinformatics palette)
+/** Prevent XSS when inserting user data into HTML */
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Fill + border colors per entity type
 const NODE_TYPE_STYLES = {
-  Disease: { color: "#e11d48", border: "#fb7185", shape: "round-rectangle" },
-  Gene: { color: "#2563eb", border: "#60a5fa", shape: "ellipse" },
-  Compound: { color: "#059669", border: "#34d399", shape: "diamond" },
-  Pathway: { color: "#7c3aed", border: "#a78bfa", shape: "hexagon" },
-  Protein: { color: "#d97706", border: "#fbbf24", shape: "rectangle" },
+  Disease: { color: "#2563eb", border: "#60a5fa", shape: "ellipse" },
+  Gene: { color: "#f97316", border: "#fb923c", shape: "hexagon" },
+  Drug: { color: "#8b5cf6", border: "#c084fc", shape: "diamond" },
+  Protein: { color: "#16a34a", border: "#4ade80", shape: "round-rectangle" },
+  Paper: { color: "#64748b", border: "#94a3b8", shape: "rectangle" },
 };
 
 const DEFAULT_NODE_STYLE = {
-  color: "#64748b",
-  border: "#94a3b8",
+  color: "#475569",
+  border: "#64748b",
   shape: "ellipse",
 };
 
-// Edge colors by relationship (common biomedical predicates)
+// Edge colors by evidence classification and relationship type
 const RELATIONSHIP_COLORS = {
-  ASSOCIATED_WITH: "#f472b6",
-  PARTICIPATES_IN: "#a78bfa",
-  TARGETS: "#34d399",
-  INHIBITS: "#f87171",
-  MODULATES: "#22d3ee",
-  ENCODES: "#60a5fa",
-  TRIGGERS: "#fb923c",
+  SUPPORTS: "#22c55e",
+  CONTRADICTS: "#ef4444",
+  UNCERTAIN: "#9ca3af",
+  ASSOCIATED_WITH: "#60a5fa",
+  MENTIONS: "#38bdf8",
+  MENTIONED_IN: "#94a3b8",
 };
 
 const DEFAULT_EDGE_COLOR = "#64748b";
 
-const LEGEND_TYPES = ["Disease", "Gene", "Compound", "Pathway", "Protein"];
+const LEGEND_TYPES = ["Disease", "Gene", "Drug", "Protein", "Paper"];
+
+/** Convert classification to edge width based on confidence score */
+function getEdgeWidth(confidence) {
+  const score = Number(confidence ?? 0);
+  return Math.max(2.5, Math.min(7, 2.5 + score / 20));
+}
 
 let cyInstance = null;
 let currentElements = null;
+const tooltipEl = document.getElementById("cy-tooltip");
 
 /** Resolve style for a node type */
 function getNodeStyle(type) {
@@ -52,6 +65,19 @@ function getEdgeColor(relationship) {
     .toUpperCase()
     .replace(/\s+/g, "_");
   return RELATIONSHIP_COLORS[key] || DEFAULT_EDGE_COLOR;
+}
+
+function showTooltip(html, x, y) {
+  if (!tooltipEl) return;
+  tooltipEl.innerHTML = html;
+  tooltipEl.style.left = `${x + 18}px`;
+  tooltipEl.style.top = `${y + 18}px`;
+  tooltipEl.classList.remove("hidden");
+}
+
+function hideTooltip() {
+  if (!tooltipEl) return;
+  tooltipEl.classList.add("hidden");
 }
 
 /** Count connections per node for size scaling */
@@ -104,12 +130,16 @@ function buildCyElements(elements) {
     };
   });
 
-  const edges = elements.edges.map((e) => ({
-    data: {
-      ...e.data,
-      edgeColor: getEdgeColor(e.data.label),
-    },
-  }));
+  const edges = elements.edges.map((e) => {
+    const confidence = e.data.confidence_score ?? e.data.confidence ?? 0;
+    return {
+      data: {
+        ...e.data,
+        edgeColor: getEdgeColor(e.data.label),
+        edgeWidth: getEdgeWidth(confidence),
+      },
+    };
+  });
 
   return [...nodes, ...edges];
 }
@@ -211,14 +241,14 @@ function getGraphStylesheet() {
     {
       selector: "edge",
       style: {
-        width: 2.5,
+        width: "data(edgeWidth)",
         "line-color": "data(edgeColor)",
         "target-arrow-color": "data(edgeColor)",
         "target-arrow-shape": "triangle",
         "arrow-scale": 1.1,
         "curve-style": "bezier",
         "control-point-step-size": 40,
-        opacity: 0.85,
+        opacity: 0.9,
         label: "data(label)",
         "font-size": 9,
         "font-weight": 500,
@@ -228,8 +258,8 @@ function getGraphStylesheet() {
         "text-rotation": "autorotate",
         "text-margin-y": -10,
         "text-background-color": "#0f172a",
-        "text-background-opacity": 0.75,
-        "text-background-padding": 3,
+        "text-background-opacity": 0.85,
+        "text-background-padding": 4,
         "text-background-shape": "roundrectangle",
       },
     },
@@ -336,10 +366,39 @@ function setupHoverHandlers() {
   if (!cyInstance) return;
 
   cyInstance.on("mouseover", "node", (evt) => {
-    evt.target.addClass("hover");
+    const node = evt.target;
+    node.addClass("hover");
+    const data = node.data();
+    const tooltipHtml = `<strong>${escapeHtml(data.type || "Node")}</strong>
+      <p>${escapeHtml(data.label || data.id)}</p>
+      <p class="muted">Click to view evidence and papers</p>`;
+    const pos = evt.renderedPosition || evt.position || { x: 0, y: 0 };
+    showTooltip(tooltipHtml, pos.x, pos.y);
   });
+
   cyInstance.on("mouseout", "node", (evt) => {
     evt.target.removeClass("hover");
+    hideTooltip();
+  });
+
+  cyInstance.on("mouseover", "edge", (evt) => {
+    const edge = evt.target;
+    edge.addClass("highlighted");
+    const data = edge.data();
+    const score = data.confidence_score ?? data.confidence ?? 0;
+    const support = data.support_count ?? 0;
+    const contradict = data.contradict_count ?? 0;
+    const tooltipHtml = `<strong>Relationship</strong>
+      <p>${escapeHtml(String(data.label || data.relationship || "Edge"))}</p>
+      <p>Confidence: ${escapeHtml(String(score))}%</p>
+      <p>Support: ${escapeHtml(String(support))}, Contradict: ${escapeHtml(String(contradict))}</p>`;
+    const pos = evt.renderedPosition || evt.position || { x: 0, y: 0 };
+    showTooltip(tooltipHtml, pos.x, pos.y);
+  });
+
+  cyInstance.on("mouseout", "edge", (evt) => {
+    evt.target.removeClass("highlighted");
+    hideTooltip();
   });
 }
 
@@ -379,13 +438,20 @@ function renderGraph(elements, onNodeSelect) {
   cyInstance.on("tap", "node", (evt) => {
     const node = evt.target;
     focusNode(node);
-    onNodeSelect(node.id());
+    onNodeSelect(node.id(), null);
+  });
+
+  cyInstance.on("tap", "edge", (evt) => {
+    const edge = evt.target;
+    clearFocusClasses();
+    edge.addClass("highlighted");
+    onNodeSelect(null, edge.id());
   });
 
   cyInstance.on("tap", (evt) => {
     if (evt.target === cyInstance) {
       clearFocusClasses();
-      onNodeSelect(null);
+      onNodeSelect(null, null);
     }
   });
 
@@ -506,11 +572,13 @@ function renderLegend(extraTypes) {
 
   if (relList) {
     relList.innerHTML = "";
-    Object.entries(RELATIONSHIP_COLORS).forEach(([rel, color]) => {
+    ["SUPPORTS", "CONTRADICTS", "UNCERTAIN"].forEach((rel) => {
+      const color = RELATIONSHIP_COLORS[rel] || DEFAULT_EDGE_COLOR;
+      const label = rel === "SUPPORTS" ? "Supporting" : rel === "CONTRADICTS" ? "Contradicting" : "Uncertain";
       const li = document.createElement("li");
       li.innerHTML = `
         <span class="legend-edge" style="background:${color}"></span>
-        <span>${rel.replace(/_/g, " ")}</span>
+        <span>${label}</span>
       `;
       relList.appendChild(li);
     });

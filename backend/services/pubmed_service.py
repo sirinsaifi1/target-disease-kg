@@ -78,6 +78,7 @@ class PubMedService:
 
         summary = articles[0]
         summary["abstract"] = self.fetch_abstract(pmid)
+        summary["abstract_snippet"] = summary["abstract"][:240]
         return summary
 
     @ttl_cache(seconds=3600)
@@ -102,12 +103,14 @@ class PubMedService:
             pmid = summary.get("pmid")
             if not pmid:
                 continue
+            abstract = self.fetch_abstract(pmid)
             enriched.append(
                 {
                     **summary,
-                    "abstract": self.fetch_abstract(pmid),
+                    "abstract": abstract,
+                    "abstract_snippet": abstract[:240],
                     "source_text": normalize_whitespace(
-                        f"{summary.get('title', '')} {summary.get('abstract', '')}"
+                        f"{summary.get('title', '')} {abstract}"
                     ),
                 }
             )

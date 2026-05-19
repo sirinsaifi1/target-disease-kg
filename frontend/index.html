@@ -102,12 +102,57 @@
             <dl id="stats-grid" class="stats-grid hidden"></dl>
           </section>
 
-          <!-- Node type legend -->
-          <section class="panel" id="legend-panel">
-            <h3>Node types</h3>
-            <ul id="legend-list" class="legend-list"></ul>
-            <h3 class="legend-subtitle">Relationships</h3>
-            <ul id="legend-relationships" class="legend-list legend-list--compact"></ul>
+          <!-- Graph legend and how-to guide -->
+          <section class="panel legend-panel" id="legend-panel">
+            <details open class="panel-collapsible">
+              <summary class="panel-summary">
+                <span>Graph Legend</span>
+                <span class="summary-hint">Tap to collapse</span>
+              </summary>
+              <div class="legend-columns">
+                <div class="legend-block">
+                  <h3>Node shapes + colors</h3>
+                  <ul id="legend-list" class="legend-list"></ul>
+                </div>
+                <div class="legend-block">
+                  <h3>Edge evidence</h3>
+                  <ul id="legend-relationships" class="legend-list legend-list--compact"></ul>
+                  <div class="legend-edge-samples">
+                    <div class="legend-edge-sample legend-edge-sample--thin">
+                      <span class="legend-edge"></span>
+                      <div>
+                        <strong>Thin edge</strong>
+                        <p>Weaker evidence</p>
+                      </div>
+                    </div>
+                    <div class="legend-edge-sample legend-edge-sample--thick">
+                      <span class="legend-edge"></span>
+                      <div>
+                        <strong>Thick edge</strong>
+                        <p>Stronger evidence</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="muted legend-note">Edge thickness reflects confidence score.</p>
+                </div>
+              </div>
+            </details>
+          </section>
+
+          <section class="panel help-panel">
+            <details open class="panel-collapsible">
+              <summary class="panel-summary">
+                <span>How to Read This Graph</span>
+                <span class="summary-hint">Quick user guide</span>
+              </summary>
+              <ol class="help-list">
+                <li>Search a disease, gene, or drug.</li>
+                <li>The graph shows related biomedical entities and evidence.</li>
+                <li>Click nodes to view details and PubMed evidence.</li>
+                <li>Click edges to see support, contradiction, and linked papers.</li>
+                <li>Use timeline and filters to refine findings.</li>
+              </ol>
+            </details>
           </section>
         </aside>
 
@@ -155,9 +200,18 @@
               <button type="button" id="btn-relayout" title="Re-run layout">Layout</button>
             </div>
             <div id="graph-placeholder" class="graph-placeholder">
-              Your knowledge graph will appear here after upload
+              <div class="placeholder-art" aria-hidden="true">
+                <svg viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="42" cy="42" r="40" stroke="#334155" stroke-width="4"/>
+                  <path d="M28 40C28 35.5817 31.5817 32 36 32H52C56.4183 32 60 35.5817 60 40V44C60 48.4183 56.4183 52 52 52H36C31.5817 52 28 48.4183 28 44V40Z" fill="#475569"/>
+                  <path d="M44 24V16M44 68V60M24 44H16M68 44H60" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>Search a disease, gene, or drug to explore biomedical relationships.</h3>
+              <p class="muted">Upload a CSV or use PubMed search to reveal evidence-backed links instantly.</p>
             </div>
             <div id="cy" class="cy hidden"></div>
+            <div id="cy-tooltip" class="cy-tooltip hidden" aria-hidden="true"></div>
           </section>
         </section>
 
