@@ -298,6 +298,45 @@ function renderSidebar(nodeId, edgeId) {
           .map((r) => `<li>${escapeHtml(r)}</li>`)
           .join("")}</ul>`;
 
+  // Build node details block (for genes, papers, etc.)
+  let nodeDetailsHtml = '';
+  if (details.nodeData?.details) {
+    const nodeInfo = details.nodeData.details;
+    
+    if (details.type === 'Paper' && nodeInfo.pmid) {
+      // Display paper information
+      nodeDetailsHtml = `
+        <div class="detail-block">
+          <p class="label">Paper Details</p>
+          <div style="font-size:0.9rem;color:#cbd5e1">
+            ${nodeInfo.pmid ? `<p><strong>PMID:</strong> ${escapeHtml(nodeInfo.pmid)}</p>` : ''}
+            ${nodeInfo.journal ? `<p><strong>Journal:</strong> ${escapeHtml(nodeInfo.journal)}</p>` : ''}
+            ${nodeInfo.year ? `<p><strong>Year:</strong> ${escapeHtml(String(nodeInfo.year))}</p>` : ''}
+            ${nodeInfo.url ? `<p><a href="${escapeHtml(nodeInfo.url)}" target="_blank" rel="noreferrer" style="color:#60a5fa">View on PubMed →</a></p>` : ''}
+          </div>
+        </div>`;
+    } else if (['Gene', 'Protein', 'Drug', 'Disease'].includes(details.type)) {
+      // Display general entity details
+      const detailsStr = Object.entries(nodeInfo)
+        .filter(([key, val]) => val && key !== 'source')
+        .map(([key, val]) => `<p><strong>${escapeHtml(key)}:</strong> ${escapeHtml(String(val))}</p>`)
+        .join('');
+      if (detailsStr) {
+        nodeDetailsHtml = `
+          <div class="detail-block">
+            <p class="label">Details</p>
+            <div style="font-size:0.9rem;color:#cbd5e1">
+              ${detailsStr}
+            </div>
+          </div>`;
+      }
+    }
+  }
+
+  // Fetch related papers
+  const relatedPapers = getRelatedPapers(nodeId, graphElements);
+  const papersHtml = renderRelatedPapers(relatedPapers);
+
   sidebarContent.innerHTML = `
     <div class="detail-block">
       <p class="label">Name</p>
@@ -318,6 +357,8 @@ function renderSidebar(nodeId, edgeId) {
       <p class="label">Relationships</p>
       ${relHtml}
     </div>
+    ${nodeDetailsHtml}
+    ${papersHtml}
   `;
 }
 
@@ -384,6 +425,116 @@ function renderEdgeSidebar(edge) {
     <div class="detail-block">
       <p class="label">Evidence Summary</p>
       ${evidenceHtml ? `<div style="display:grid;gap:0.5rem">${evidenceHtml}</div>` : '<p class="muted">No evidence data</p>'}
+    </div>
+  `;
+}
+
+/** Get papers related to a node from edges with evidence_links */
+function getRelatedPapers(nodeId, elements) {
+  const papers = [];
+  const seenPapers = new Set();
+
+  elements.edges.forEach((edge) => {
+    const { source, target, evidence_links, supporting_papers, contradicting_papers, uncertain_papers } = edge.data;
+    
+    // Check if this edge is connected to the node
+    if (source === nodeId || target === nodeId) {
+      // Add evidence links
+      if (evidence_links && Array.isArray(evidence_links)) {
+        evidence_links.forEach((link) => {
+          if (link.pmid && !seenPapers.has(link.pmid)) {
+            seenPapers.add(link.pmid);
+            papers.push({
+              ...link,
+              classification: link.classification || 'associated',
+            });
+          }
+        });
+      }
+
+      // Add supporting papers
+      if (supporting_papers && Array.isArray(supporting_papers)) {
+        supporting_papers.forEach((paper) => {
+          if (paper.pmid && !seenPapers.has(paper.pmid)) {
+            seenPapers.add(paper.pmid);
+            papers.push({
+              ...paper,
+              classification: 'supports',
+            });
+          }
+        });
+      }
+
+      // Add contradicting papers
+      if (contradicting_papers && Array.isArray(contradicting_papers)) {
+        contradicting_papers.forEach((paper) => {
+          if (paper.pmid && !seenPapers.has(paper.pmid)) {
+            seenPapers.add(paper.pmid);
+            papers.push({
+              ...paper,
+              classification: 'contradicts',
+            });
+          }
+        });
+      }
+
+      // Add uncertain papers
+      if (uncertain_papers && Array.isArray(uncertain_papers)) {
+        uncertain_papers.forEach((paper) => {
+          if (paper.pmid && !seenPapers.has(paper.pmid)) {
+            seenPapers.add(paper.pmid);
+            papers.push({
+              ...paper,
+              classification: 'uncertain',
+            });
+          }
+        });
+      }
+    }
+  });
+
+  return papers;
+}
+
+/** Render related papers for sidebar display */
+function renderRelatedPapers(papers) {
+  if (!papers || papers.length === 0) {
+    return '';
+  }
+
+  const getClassificationBadge = (classification) => {
+    const colors = {
+      'supports': { bg: '#22c55e', label: 'Supporting' },
+      'contradicts': { bg: '#ef4444', label: 'Contradicting' },
+      'uncertain': { bg: '#9ca3af', label: 'Uncertain' },
+      'associated': { bg: '#60a5fa', label: 'Associated' },
+    };
+    const color = colors[classification] || colors['associated'];
+    return `<span style="background:${color.bg}22;color:${color.bg};padding:0.25rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:600">${color.label}</span>`;
+  };
+
+  const papersHtml = papers.slice(0, 5).map((paper) => `
+    <div style="border-left:3px solid #60a5fa;padding-left:0.75rem;margin-bottom:0.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:0.5rem;margin-bottom:0.25rem">
+        <p style="font-size:0.85rem;font-weight:600;color:#e2e8f0;flex:1">${escapeHtml(paper.title || 'Untitled')}</p>
+        ${getClassificationBadge(paper.classification)}
+      </div>
+      <p style="font-size:0.75rem;color:#94a3b8;margin:0.25rem 0">
+        ${paper.journal ? `${escapeHtml(paper.journal)}` : 'Unknown Journal'} • ${paper.year || 'Unknown Year'}
+      </p>
+      ${paper.pmid ? `<p style="font-size:0.75rem;color:#94a3b8;margin:0.25rem 0">PMID: ${escapeHtml(paper.pmid)}</p>` : ''}
+      ${paper.url ? `<a href="${escapeHtml(paper.url)}" target="_blank" rel="noreferrer" style="color:#60a5fa;font-size:0.75rem;text-decoration:none;display:inline-block;margin-top:0.25rem">View on PubMed →</a>` : ''}
+    </div>
+  `).join('');
+
+  const remainingCount = papers.length - 5;
+  return `
+    <div class="detail-block">
+      <p class="label">Related Papers (${papers.length})</p>
+      <div style="font-size:0.9rem;color:#cbd5e1">
+        ${papersHtml}
+        ${remainingCount > 0 ? `<p class="muted" style="font-size:0.75rem;margin-top:0.5rem">+${remainingCount} more papers</p>` : ''}
+      </div>
     </div>
   `;
 }

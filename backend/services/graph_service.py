@@ -71,6 +71,8 @@ class GraphService:
                     "label": query.title(),
                     "type": "Disease",
                     "details": {"query": query, "entity_type": entity_type},
+                    "metadata": {"query": query, "entity_type": entity_type},
+                    "papers": [],
                 }
             }
         }
@@ -109,6 +111,13 @@ class GraphService:
                         "url": paper_meta["url"],
                         "abstract_snippet": paper_meta["abstract_snippet"],
                     },
+                    "metadata": {
+                        "pmid": pmid,
+                        "journal": paper_meta["journal"],
+                        "year": paper_meta["year"],
+                        "doi": paper_meta["doi"],
+                    },
+                    "papers": [paper_meta],
                 }
             }
             edges.append(
@@ -124,6 +133,14 @@ class GraphService:
                         "support_count": 1,
                         "contradict_count": 0,
                         "uncertain_count": 0,
+                        "supporting_papers": [
+                            {
+                                **paper_meta,
+                                "classification": "supports",
+                            }
+                        ],
+                        "contradicting_papers": [],
+                        "uncertain_papers": [],
                         "evidence_links": [
                             {
                                 **paper_meta,
@@ -157,6 +174,8 @@ class GraphService:
                             "label": entity["name"],
                             "type": entity["type"],
                             "details": {"source": "Auto-extracted"},
+                            "metadata": {"source": "Auto-extracted"},
+                            "papers": [],
                         }
                     }
                 relation_key = (disease_node_id, entity_id)
@@ -214,6 +233,9 @@ class GraphService:
                             "support_count": 1 if classification == "supports" else 0,
                             "contradict_count": 1 if classification == "contradicts" else 0,
                             "uncertain_count": 1 if classification == "uncertain" else 0,
+                            "supporting_papers": [paper_link] if classification == "supports" else [],
+                            "contradicting_papers": [paper_link] if classification == "contradicts" else [],
+                            "uncertain_papers": [paper_link] if classification == "uncertain" else [],
                             "evidence_links": [paper_link],
                             "year": year,
                         }
@@ -259,6 +281,16 @@ class GraphService:
                     }
                 }
             )
+
+        for edge in edges:
+            source = edge["data"]["source"]
+            target = edge["data"]["target"]
+            if source.startswith("Paper:") and target in nodes:
+                paper_data = nodes[source]["data"].get("details", {})
+                nodes[target]["data"].setdefault("papers", []).append(paper_data)
+            if target.startswith("Paper:") and source in nodes:
+                paper_data = nodes[target]["data"].get("details", {})
+                nodes[source]["data"].setdefault("papers", []).append(paper_data)
 
         elements = {"nodes": list(nodes.values()), "edges": edges + relationship_edges}
         summary = self._build_summary(elements, timeline_counter)

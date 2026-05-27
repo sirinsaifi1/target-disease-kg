@@ -321,17 +321,30 @@ function renderGraph(graph, onNodeSelect) {
     boxSelectionEnabled: false,
   });
 
+  console.log("[graph] Cytoscape initialized", { nodeCount: graph.elements.nodes.length, edgeCount: graph.elements.edges.length });
+
   cyInstance.on("tap", "node", (evt) => {
-    focusNode(evt.target);
-    if (typeof onSelection === "function") {
-      onSelection({ type: "node", id: evt.target.id() });
+    const node = evt.target;
+    console.log("[graph] Node tapped:", node.id(), node.data());
+    focusNode(node);
+    if (typeof onNodeSelect === "function") {
+      onNodeSelect({ type: "node", id: node.id() });
     }
   });
 
   cyInstance.on("tap", "edge", (evt) => {
-    focusNode(evt.target);
-    if (typeof onSelection === "function") {
-      onSelection({ type: "edge", id: evt.target.id() });
+    const edge = evt.target;
+    console.log("[graph] Edge tapped:", edge.id(), edge.data());
+    focusNode(edge);
+    if (typeof onNodeSelect === "function") {
+      onNodeSelect({ type: "edge", id: edge.id() });
+    }
+  });
+
+  cyInstance.on("tap", (evt) => {
+    if (evt.target === cyInstance) {
+      console.log("[graph] Background tapped");
+      clearFocus();
     }
   });
 
@@ -341,8 +354,8 @@ function renderGraph(graph, onNodeSelect) {
 
   cyInstance.on("cxttap", "node", (evt) => {
     collapseNeighborhood(evt.target);
-    if (typeof onSelection === "function") {
-      onSelection({ type: "node", id: evt.target.id() });
+    if (typeof onNodeSelect === "function") {
+      onNodeSelect({ type: "node", id: evt.target.id() });
     }
   });
 

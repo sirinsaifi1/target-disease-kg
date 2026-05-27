@@ -546,6 +546,7 @@ function getNodeDetails(nodeId, elements) {
     id: node.data.id,
     name: node.data.label,
     type: node.data.type,
+    nodeData: node.data,
     connectedCount: neighborIds.size,
     relationships,
   };
