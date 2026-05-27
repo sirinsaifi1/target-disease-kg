@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TargetGraph AI - Full Functional Zero Install App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 14px;
+      overflow-x: auto;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(99,102,241,0.22), transparent 28%),
+        radial-gradient(circle at 82% 15%, rgba(16,185,129,0.14), transparent 26%),
+        radial-gradient(circle at 50% 85%, rgba(14,165,233,0.14), transparent 30%);
+      filter: blur(18px);
+      animation: floatGlow 16s ease-in-out infinite alternate;
+      z-index: -2;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at center, black, transparent 80%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    @keyframes floatGlow {
+      0% { transform: translate3d(0,0,0) scale(1); }
+      50% { transform: translate3d(-2%,1%,0) scale(1.04); }
+      100% { transform: translate3d(2%,-1%,0) scale(1.02); }
+    }
+    .container { max-width: 1700px; min-width: 1180px; margin: auto; padding-bottom: 96px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(17,24,39,0.78), rgba(30,27,75,0.72));
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 28px;
+      padding: 26px;
+      margin-bottom: 16px;
+      box-shadow: 0 28px 70px rgba(0,0,0,0.38);
+      transform: translateZ(0);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 360px;
+      height: 360px;
+      right: -120px;
+      top: -170px;
+      background: radial-gradient(circle, rgba(129,140,248,0.35), transparent 68%);
+      animation: pulseOrb 8s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes pulseOrb {
+      from { transform: scale(0.9); opacity: 0.65; }
+      to { transform: scale(1.14); opacity: 1; }
+    }
+    .tag {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      color: #c7d2fe;
+      border: 1px solid rgba(129,140,248,0.3);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
+    h1 { font-size: 34px; margin-bottom: 10px; color: white; }
+    h2 { font-size: 18px; margin-bottom: 12px; color: white; }
+    h3 { font-size: 15px; color: white; }
+    .subtitle { max-width: 1100px; color: #cbd5e1; line-height: 1.6; font-size: 14px; }
+    .topbar, .pathbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: rgba(15,23,42,0.62);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.13);
+      padding: 14px;
+      border-radius: 24px;
+      margin-bottom: 14px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.28);
+    }
+    .topbar {
+      position: sticky;
+      top: 10px;
+      z-index: 10;
+    }
+    .pathbar { display: grid; grid-template-columns: 1fr 1fr auto auto auto; align-items: end; }
+    input, select, textarea {
+      width: 100%;
+      background: #020617;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 12px 14px;
+      outline: none;
+      font-size: 14px;
+    }
+    textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
+    input:focus, select:focus, textarea:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      white-space: nowrap;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,0,0,0.24); }
+    button:active { transform: translateY(0); }
+    .primary { background: #6366f1; color: white; }
+    .primary:hover { background: #4f46e5; }
+    .success { background: #059669; color: white; }
+    .success:hover { background: #047857; }
+    .danger { background: #be123c; color: white; }
+    .danger:hover { background: #9f1239; }
+    .secondary { background: rgba(255,255,255,0.08); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); }
+    .secondary:hover { background: rgba(255,255,255,0.14); }
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(760px, 1fr) 380px;
+      gap: 16px;
+    }
+    .card {
+      background: rgba(15,23,42,0.62);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 26px;
+      padding: 16px;
+      box-shadow: 0 24px 55px rgba(0,0,0,0.32);
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(129,140,248,0.30);
+      box-shadow: 0 30px 70px rgba(0,0,0,0.42);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .evidence-dashboard {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      background: rgba(15,23,42,0.56);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 22px 50px rgba(0,0,0,0.30);
+    }
+    .dash-card {
+      position: relative;
+      overflow: hidden;
+      background: rgba(2,6,23,0.58);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 18px;
+      padding: 14px;
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+    .dash-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -20px -30px auto;
+      width: 90px;
+      height: 90px;
+      background: radial-gradient(circle, rgba(99,102,241,0.22), transparent 70%);
+      pointer-events: none;
+    }
+    .dash-card:hover { transform: translateY(-4px); border-color: rgba(129,140,248,0.32); }
+    .dash-card b {
+      display: block;
+      font-size: 24px;
+      color: white;
+      margin-bottom: 4px;
+    }
+    .dash-card span {
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .top-links {
+      grid-column: 1 / -1;
+      background: rgba(2,6,23,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .top-link-list {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .top-link-item {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(15,23,42,0.7);
+      cursor: pointer;
+      transition: transform 0.22s ease, background 0.22s ease, border-color 0.22s ease;
+    }
+    .top-link-item:hover { background: rgba(255,255,255,0.08); transform: translateY(-4px); border-color: rgba(52,211,153,0.28); }
+    .stat {
+      background: rgba(2,6,23,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat b { display: block; font-size: 22px; color: white; }
+    .stat span { font-size: 12px; color: #94a3b8; }
+    .filter-btn {
+      width: 100%;
+      margin-bottom: 8px;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .active { opacity: 1; }
+    .inactive { opacity: 0.35; }
+    .graph-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .graph-wrap {
+      height: 760px;
+      background: radial-gradient(circle at center, rgba(17,24,39,0.96) 0%, rgba(2,6,23,0.98) 70%);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 26px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: inset 0 0 80px rgba(99,102,241,0.10);
+    }
+    .graph-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px dashed rgba(148,163,184,0.12);
+      border-radius: 22px;
+      pointer-events: none;
+    }
+    .floating-graph-controls {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      display: flex;
+      gap: 8px;
+      z-index: 4;
+      background: rgba(2,6,23,0.62);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 8px;
+      box-shadow: 0 18px 36px rgba(0,0,0,0.32);
+    }
+    .floating-graph-controls button { padding: 9px 11px; font-size: 12px; }
+    svg { width: 100%; height: 100%; user-select: none; }
+    .node { cursor: grab; }
+    .node:active { cursor: grabbing; }
+    .edge { cursor: pointer; }
+    .node-label { font-size: 15px; font-weight: bold; fill: #0f172a; pointer-events: none; }
+    .node-score { font-size: 13px; font-weight: bold; fill: #e2e8f0; pointer-events: none; }
+    .edge-label { font-size: 14px; fill: #fbbf24; font-weight: bold; pointer-events: none; }
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      margin: 4px 4px 4px 0;
+    }
+    .Disease { background: #ffe4e6; color: #be123c; }
+    .Target { background: #e0e7ff; color: #4338ca; }
+    .Pathway { background: #d1fae5; color: #047857; }
+    .Drug { background: #e0f2fe; color: #0369a1; }
+    .Biomarker { background: #fef3c7; color: #b45309; }
+    .Mechanism { background: #ede9fe; color: #6d28d9; }
+    .score {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 12px;
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .score-strong { background: #064e3b; color: #a7f3d0; }
+    .score-mid { background: #78350f; color: #fde68a; }
+    .score-low { background: #7f1d1d; color: #fecaca; }
+    .muted { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+    .small { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+    .entity-list { max-height: 260px; overflow: auto; }
+    .entity-item {
+      background: rgba(15,23,42,0.75);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .entity-item:hover { background: rgba(255,255,255,0.08); transform: translateX(4px); border-color: rgba(129,140,248,0.26); }
+    .panel-grid { display: grid; gap: 10px; margin-top: 10px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field-label {
+      display: block;
+      color: #94a3b8;
+      font-size: 12px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab { padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+    .tab.active-tab { background: #6366f1; color: white; }
+    .hidden { display: none !important; }
+    .path-result {
+      grid-column: 1 / -1;
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1.6;
+      background: rgba(2,6,23,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: none;
+    }
+    .report {
+      margin-top: 16px;
+      background: linear-gradient(135deg, rgba(6,78,59,0.50), rgba(15,23,42,0.82));
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(52,211,153,0.28);
+      border-radius: 28px;
+      padding: 22px;
+      display: none;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.40);
+      animation: floatIn 0.45s ease both;
+    }
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(18px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .report-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .report-box {
+      background: rgba(2,6,23,0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 10px; text-align: left; vertical-align: top; }
+    th { color: #cbd5e1; background: rgba(2,6,23,0.5); position: sticky; top: 0; }
+    .table-wrap { max-height: 300px; overflow: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 96px;
+      background: rgba(17,24,39,0.82);
+      backdrop-filter: blur(16px);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+      display: none;
+      z-index: 20;
+    }
+    .floating-dock {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 15;
+      display: flex;
+      gap: 10px;
+      background: rgba(2,6,23,0.70);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      padding: 10px;
+      box-shadow: 0 26px 60px rgba(0,0,0,0.42);
+    }
+    .floating-dock button {
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+    @media (max-width: 1150px) {
+      .layout { grid-template-columns: 1fr; }
+      .pathbar { grid-template-columns: 1fr; }
+      .graph-wrap { height: 680px; }
+      .report-grid, .form-grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .evidence-dashboard { grid-template-columns: repeat(2, 1fr); }
+      .top-link-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="tag">TargetGraph AI · Full Functional Zero-Install Version</div>
+      <h1>Interactive Knowledge Graph Explorer</h1>
+      <p class="subtitle">
+        A browser-based target–disease hypothesis generation tool. Build, edit, explore, score, save, import, export, and report biological knowledge graph relationships without installing any software.
+      </p>
+      <div class="stats">
+        <div class="stat"><b id="nodeCount">0</b><span>Nodes</span></div>
+        <div class="stat"><b id="edgeCount">0</b><span>Relationships</span></div>
+        <div class="stat"><b id="selectedScore">0</b><span>Selected Score</span></div>
+        <div class="stat"><b id="pathScore">-</b><span>Path Score</span></div>
+      </div>
+    </section>
+
+    <section class="topbar">
+      <input id="searchInput" value="Type 2 Diabetes" placeholder="Search Type 2 Diabetes, PPARG, GLP1R, Metformin, NASH, CKD, miR-375..." style="flex:1; min-width:260px;" />
+      <button class="primary" onclick="searchNode()">Search / Focus</button>
+      <button class="success" onclick="generateHypothesis()">Generate Hypothesis</button>
+      <button class="secondary" onclick="exportReport()">Export Report</button>
+      <button class="secondary" onclick="saveProject()">Save</button>
+      <button class="secondary" onclick="resetToDemo()">Reset Demo</button>
+    </section>
+
+    <section class="pathbar">
+      <div>
+        <label class="field-label">Start entity</label>
+        <select id="sourceSelect"></select>
+      </div>
+      <div>
+        <label class="field-label">End entity</label>
+        <select id="targetSelect"></select>
+      </div>
+      <button class="primary" onclick="findHypothesisPath()">Find Path</button>
+      <button class="secondary" onclick="clearPath()">Clear Path</button>
+      <button class="secondary" onclick="exportGraphJSON()">Export JSON</button>
+      <div id="pathResult" class="path-result"></div>
+    </section>
+
+    <section class="evidence-dashboard">
+      <div class="dash-card"><b id="strongCount">0</b><span>Strong relationships<br>score ≥ 85</span></div>
+      <div class="dash-card"><b id="moderateCount">0</b><span>Moderate relationships<br>score 70–84</span></div>
+      <div class="dash-card"><b id="exploratoryCount">0</b><span>Exploratory relationships<br>score 55–69</span></div>
+      <div class="dash-card"><b id="weakCount">0</b><span>Weak relationships<br>score &lt; 55</span></div>
+      <div class="dash-card"><b id="avgGraphScore">0</b><span>Average relationship<br>confidence score</span></div>
+      <div class="top-links">
+        <h3>Top 5 Strongest Biological Links</h3>
+        <p class="small">Click any relationship below to inspect its evidence in the side panel.</p>
+        <div id="topLinks" class="top-link-list"></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <aside class="card">
+        <h2>Control Panel</h2>
+        <div class="tabs">
+          <button class="tab active-tab" id="tabFilters" onclick="showLeftTab('filters')">Filters</button>
+          <button class="tab secondary" id="tabAdd" onclick="showLeftTab('add')">Add Data</button>
+          <button class="tab secondary" id="tabData" onclick="showLeftTab('data')">Data</button>
+        </div>
+
+        <div id="filtersPanel">
+          <h3>Node Types</h3><br />
+          <div id="filters"></div>
+          <br />
+          <label class="field-label">Minimum relationship score</label>
+          <input id="minScore" type="range" min="0" max="100" value="0" oninput="renderAll()" />
+          <p class="small">Current: <span id="minScoreLabel">0</span>/100</p>
+          <br />
+          <p class="muted">Tip: use filters and path finder to show only the strongest hypothesis routes.</p>
+        </div>
+
+        <div id="addPanel" class="hidden">
+          <h3>Add Node</h3><br />
+          <div class="panel-grid">
+            <input id="newNodeLabel" placeholder="Entity label, e.g., IL6" />
+            <select id="newNodeType">
+              <option>Disease</option><option>Target</option><option>Pathway</option><option>Drug</option><option>Biomarker</option><option>Mechanism</option>
+            </select>
+            <input id="newNodeConfidence" type="number" min="0" max="100" value="70" placeholder="Confidence" />
+            <textarea id="newNodeDescription" placeholder="Short description"></textarea>
+            <textarea id="newNodeRelevance" placeholder="Biological relevance"></textarea>
+            <button class="success" onclick="addNode()">Add Node</button>
+          </div>
+          <br />
+          <h3>Add Relationship</h3><br />
+          <div class="panel-grid">
+            <select id="edgeSource"></select>
+            <select id="edgeTarget"></select>
+            <input id="newEdgeRelationship" placeholder="relationship, e.g., associated_with" />
+            <input id="newEdgeScore" type="number" min="0" max="100" value="70" />
+            <select id="newEdgeEvidence"><option>Strong</option><option>Moderate</option><option>Exploratory</option><option>Weak</option></select>
+            <textarea id="newEdgeExplanation" placeholder="Evidence explanation"></textarea>
+            <button class="success" onclick="addEdge()">Add Relationship</button>
+          </div>
+        </div>
+
+        <div id="dataPanel" class="hidden">
+          <h3>Project Data</h3><br />
+          <button class="secondary" onclick="copyGraphJSON()" style="width:100%; margin-bottom:8px;">Copy Graph JSON</button>
+          <button class="secondary" onclick="exportGraphJSON()" style="width:100%; margin-bottom:8px;">Download Graph JSON</button>
+          <label class="field-label">Import JSON</label>
+          <textarea id="importJson" placeholder='Paste JSON: { "nodes": [...], "edges": [...] }'></textarea>
+          <button class="primary" onclick="importGraphJSON()" style="width:100%; margin-top:8px;">Import Graph</button>
+          <br /><br />
+          <button class="danger" onclick="clearSavedProject()" style="width:100%;">Clear Saved Browser Data</button>
+        </div>
+      </aside>
+
+      <main class="card">
+        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:start;">
+          <div>
+            <h2>Interactive Biological Knowledge Graph</h2>
+            <p class="small" id="notice">Default Type 2 Diabetes graph loaded. Drag nodes, click nodes/edges, or find a hypothesis path.</p>
+          </div>
+          </div>
+        <div class="graph-wrap">
+          <div class="floating-graph-controls">
+            <button class="secondary" onclick="zoomGraph(0.9)">＋</button>
+            <button class="secondary" onclick="zoomGraph(1.1)">－</button>
+            <button class="secondary" onclick="resetView()">Reset</button>
+            <button class="secondary" onclick="autoLayout()">Auto</button>
+          </div>
+          <svg id="graph" viewBox="0 0 1150 820"></svg>
+        </div>
+      </main>
+
+      <aside class="card">
+        <h2>Selected Evidence</h2>
+        <div id="detailPanel"></div>
+        <br />
+        <h2>Connected Entities</h2>
+        <div id="connectedPanel" class="entity-list"></div>
+        <br />
+        <h2>Evidence Table</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Relationship</th><th>Score</th></tr></thead>
+            <tbody id="evidenceTable"></tbody>
+          </table>
+        </div>
+      </aside>
+    </div>
+
+    <section id="report" class="report"></section>
+  </div>
+
+  <div class="floating-dock">
+    <button class="primary" onclick="findHypothesisPath()">Find Path</button>
+    <button class="success" onclick="generateHypothesis()">Generate Report</button>
+    <button class="secondary" onclick="saveProject()">Save</button>
+    <button class="secondary" onclick="exportReport()">Export</button>
+    <button class="secondary" onclick="window.scrollTo({top:0,behavior:'smooth'})">Top</button>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const NODE_TYPES = ["Disease", "Target", "Pathway", "Drug", "Biomarker", "Mechanism"];
+    const STORAGE_KEY = "targetgraph_ai_project_v1";
+
+    const typeColors = {
+      Disease: { fill: "#ffe4e6", stroke: "#fb7185" },
+      Target: { fill: "#e0e7ff", stroke: "#818cf8" },
+      Pathway: { fill: "#d1fae5", stroke: "#34d399" },
+      Drug: { fill: "#e0f2fe", stroke: "#38bdf8" },
+      Biomarker: { fill: "#fef3c7", stroke: "#fbbf24" },
+      Mechanism: { fill: "#ede9fe", stroke: "#a78bfa" }
+    };
+
+    const demoNodes = [
+      { id: "t2d", label: "Type 2 Diabetes", type: "Disease", x: 500, y: 360, confidence: 95, description: "A chronic metabolic disease characterized by insulin resistance, impaired glucose regulation, and progressive beta-cell dysfunction.", relevance: "Central disease entity used to explore therapeutic targets, shared mechanisms, biomarkers, and related metabolic conditions." },
+      { id: "pparg", label: "PPARG", type: "Target", x: 250, y: 180, confidence: 82, description: "A nuclear receptor involved in adipocyte differentiation, lipid metabolism, and insulin sensitivity.", relevance: "Relevant to metabolic dysfunction and glucose homeostasis; linked to thiazolidinedione drug mechanisms." },
+      { id: "glp1r", label: "GLP1R", type: "Target", x: 750, y: 180, confidence: 90, description: "A receptor involved in incretin signaling, insulin secretion, appetite regulation, and glucose control.", relevance: "Strong therapeutic target class in Type 2 Diabetes and obesity-related metabolic intervention." },
+      { id: "insr", label: "INSR", type: "Target", x: 430, y: 95, confidence: 88, description: "Insulin receptor involved in insulin signaling and glucose uptake regulation.", relevance: "Core molecular target in insulin response and metabolic signaling." },
+      { id: "akt1", label: "AKT1", type: "Target", x: 585, y: 95, confidence: 76, description: "Kinase involved in insulin signaling, growth signaling, and cellular metabolism.", relevance: "Supports downstream insulin signaling and glucose metabolism pathways." },
+      { id: "insulin", label: "Insulin Signaling", type: "Pathway", x: 500, y: 540, confidence: 92, description: "Pathway controlling insulin response, glucose transport, and metabolic regulation.", relevance: "Primary pathway involved in Type 2 Diabetes biology." },
+      { id: "ampk", label: "AMPK Signaling", type: "Pathway", x: 250, y: 550, confidence: 80, description: "Energy-sensing pathway involved in glucose uptake, lipid oxidation, and metabolic adaptation.", relevance: "Commonly discussed in relation to metformin and metabolic disease regulation." },
+      { id: "lipid", label: "Lipid Metabolism", type: "Pathway", x: 135, y: 360, confidence: 86, description: "Biological processes regulating lipid storage, oxidation, and transport.", relevance: "Connects insulin resistance, obesity, NASH/MASLD, and metabolic inflammation." },
+      { id: "inflammation", label: "Inflammation", type: "Mechanism", x: 870, y: 360, confidence: 75, description: "Immune and inflammatory activity associated with metabolic dysfunction.", relevance: "Helps explain shared biology across Type 2 Diabetes, CKD, cardiovascular disease, and NASH/MASLD." },
+      { id: "insulin_resistance", label: "Insulin Resistance", type: "Mechanism", x: 700, y: 545, confidence: 91, description: "Reduced biological response to insulin in metabolic tissues.", relevance: "A core mechanism connecting Type 2 Diabetes with obesity, NASH/MASLD, and cardiovascular risk." },
+      { id: "metformin", label: "Metformin", type: "Drug", x: 120, y: 670, confidence: 84, description: "Widely used glucose-lowering drug associated with metabolic pathway modulation.", relevance: "Useful drug node connecting treatment, AMPK signaling, and glucose regulation." },
+      { id: "pioglitazone", label: "Pioglitazone", type: "Drug", x: 90, y: 130, confidence: 86, description: "Thiazolidinedione drug class member associated with PPARG activation.", relevance: "Connects drug mechanism with PPARG, insulin sensitivity, and metabolic disease hypotheses." },
+      { id: "semaglutide", label: "Semaglutide", type: "Drug", x: 910, y: 130, confidence: 88, description: "GLP-1 receptor agonist used in metabolic disease contexts.", relevance: "Connects GLP1R biology with diabetes and obesity-related therapeutic hypotheses." },
+      { id: "obesity", label: "Obesity", type: "Disease", x: 1010, y: 270, confidence: 86, description: "A metabolic condition strongly linked to insulin resistance and cardiometabolic risk.", relevance: "Shares mechanisms with Type 2 Diabetes, including insulin resistance and inflammation." },
+      { id: "nash", label: "NASH / MASLD", type: "Disease", x: 900, y: 625, confidence: 78, description: "Metabolic liver disease involving steatosis, inflammation, and fibrosis-related progression.", relevance: "Potential cross-disease hypothesis space due to shared metabolic and inflammatory mechanisms." },
+      { id: "ckd", label: "CKD", type: "Disease", x: 1060, y: 480, confidence: 74, description: "Long-term decline in kidney function; can be associated with diabetic complications.", relevance: "Supports target-disease hypothesis exploration around vascular, inflammatory, and metabolic damage." },
+      { id: "cvd", label: "Cardiovascular Disease", type: "Disease", x: 520, y: 720, confidence: 77, description: "Cardiometabolic disease area connected with inflammation, insulin resistance, and vascular dysfunction.", relevance: "Important related disease space for metabolic target hypothesis generation." },
+      { id: "hba1c", label: "HbA1c", type: "Biomarker", x: 330, y: 720, confidence: 95, description: "Clinical biomarker reflecting average blood glucose over recent months.", relevance: "Useful biomarker node for linking disease state, monitoring, and clinical interpretation." },
+      { id: "mir375", label: "miR-375", type: "Biomarker", x: 720, y: 720, confidence: 68, description: "A microRNA often discussed in beta-cell biology and metabolic disease contexts.", relevance: "Exploratory biomarker candidate for Type 2 Diabetes-related hypothesis generation." }
+    ];
+
+    const demoEdges = [
+      { source: "t2d", target: "insulin", relationship: "involves", score: 92, evidence: "Strong", explanation: "Type 2 Diabetes is centrally associated with impaired insulin signaling and glucose regulation." },
+      { source: "t2d", target: "inflammation", relationship: "associated_with", score: 75, evidence: "Moderate", explanation: "Inflammatory mechanisms can contribute to insulin resistance and metabolic tissue dysfunction." },
+      { source: "t2d", target: "insulin_resistance", relationship: "driven_by", score: 91, evidence: "Strong", explanation: "Insulin resistance is one of the core biological mechanisms in Type 2 Diabetes." },
+      { source: "pparg", target: "lipid", relationship: "regulates", score: 88, evidence: "Strong", explanation: "PPARG is involved in lipid metabolism, adipocyte biology, and insulin sensitivity." },
+      { source: "pparg", target: "t2d", relationship: "associated_with", score: 82, evidence: "Moderate", explanation: "PPARG-related mechanisms connect lipid regulation and insulin sensitivity with Type 2 Diabetes biology." },
+      { source: "pioglitazone", target: "pparg", relationship: "targets", score: 90, evidence: "Strong", explanation: "Pioglitazone is linked to PPARG-mediated metabolic effects." },
+      { source: "glp1r", target: "t2d", relationship: "therapeutic_target_for", score: 90, evidence: "Strong", explanation: "GLP1R signaling is therapeutically relevant in Type 2 Diabetes and metabolic control." },
+      { source: "semaglutide", target: "glp1r", relationship: "targets", score: 88, evidence: "Strong", explanation: "Semaglutide is connected to GLP1R-mediated metabolic effects." },
+      { source: "insr", target: "insulin", relationship: "initiates", score: 88, evidence: "Strong", explanation: "INSR is a central receptor in the insulin signaling cascade." },
+      { source: "akt1", target: "insulin", relationship: "downstream_of", score: 76, evidence: "Moderate", explanation: "AKT1 can participate in downstream insulin signaling and metabolic regulation." },
+      { source: "metformin", target: "ampk", relationship: "modulates", score: 80, evidence: "Moderate", explanation: "Metformin is commonly connected with energy-sensing and metabolic pathway modulation." },
+      { source: "ampk", target: "insulin", relationship: "interacts_with", score: 72, evidence: "Moderate", explanation: "AMPK signaling intersects with broader metabolic and glucose-regulatory processes." },
+      { source: "lipid", target: "insulin_resistance", relationship: "contributes_to", score: 84, evidence: "Moderate", explanation: "Lipid dysregulation can contribute to insulin resistance and metabolic dysfunction." },
+      { source: "t2d", target: "obesity", relationship: "shares_mechanism_with", score: 86, evidence: "Strong", explanation: "Type 2 Diabetes and obesity share insulin resistance, metabolic inflammation, and lipid dysfunction." },
+      { source: "t2d", target: "nash", relationship: "shares_metabolic_pathways_with", score: 78, evidence: "Moderate", explanation: "Type 2 Diabetes and NASH/MASLD share metabolic dysfunction, insulin resistance, and inflammatory biology." },
+      { source: "t2d", target: "ckd", relationship: "complication_association", score: 74, evidence: "Moderate", explanation: "CKD is relevant as a diabetic complication and connected disease space." },
+      { source: "t2d", target: "cvd", relationship: "shares_risk_with", score: 77, evidence: "Moderate", explanation: "Type 2 Diabetes and cardiovascular disease share cardiometabolic and inflammatory risk mechanisms." },
+      { source: "t2d", target: "hba1c", relationship: "measured_by", score: 95, evidence: "Strong", explanation: "HbA1c is a key clinical biomarker used to evaluate glucose control." },
+      { source: "mir375", target: "t2d", relationship: "biomarker_candidate_for", score: 68, evidence: "Exploratory", explanation: "miR-375 can be explored as a biomarker candidate in beta-cell and diabetes-related contexts." },
+      { source: "inflammation", target: "ckd", relationship: "mechanistic_link", score: 70, evidence: "Moderate", explanation: "Inflammatory mechanisms may support disease overlap between metabolic disease and kidney dysfunction." },
+      { source: "inflammation", target: "nash", relationship: "mechanistic_link", score: 76, evidence: "Moderate", explanation: "Inflammation is a major biological theme in NASH/MASLD progression." },
+      { source: "insulin_resistance", target: "obesity", relationship: "shared_mechanism", score: 88, evidence: "Strong", explanation: "Insulin resistance is a major shared mechanism connecting obesity and Type 2 Diabetes." },
+      { source: "insulin_resistance", target: "nash", relationship: "shared_mechanism", score: 82, evidence: "Moderate", explanation: "Insulin resistance is mechanistically relevant to metabolic liver disease." }
+    ];
+
+    let nodes = [];
+    let edges = [];
+    let activeTypes = new Set(NODE_TYPES);
+    let selectedNodeId = "t2d";
+    let selectedEdgeIndex = null;
+    let highlightedPathNodeIds = new Set();
+    let highlightedPathEdgeKeys = new Set();
+    let lastReportText = "";
+    let currentPath = null;
+    let viewBox = { x: 0, y: 0, w: 1150, h: 820 };
+    let dragNodeId = null;
+    let svgPointOffset = { x: 0, y: 0 };
+
+    function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+    function getNode(id) { return nodes.find(n => n.id === id); }
+    function normalizeId(label) { return label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40) || "node"; }
+    function edgeKey(a, b) { return [a, b].sort().join("--"); }
+    function minScore() { return Number(document.getElementById("minScore")?.value || 0); }
+    function visibleNodes() { return nodes.filter(n => activeTypes.has(n.type)); }
+    function visibleNodeIds() { return new Set(visibleNodes().map(n => n.id)); }
+    function visibleEdges() {
+      const ids = visibleNodeIds();
+      const min = minScore();
+      return edges.map((e, i) => ({...e, index: i})).filter(e => ids.has(e.source) && ids.has(e.target) && Number(e.score) >= min);
+    }
+    function connectedEdges() { return edges.filter(e => e.source === selectedNodeId || e.target === selectedNodeId); }
+    function connectedEntities() { return connectedEdges().map(e => getNode(e.source === selectedNodeId ? e.target : e.source)).filter(Boolean); }
+    function scoreClass(score) {
+      if (score >= 85) return "score score-strong";
+      if (score >= 70) return "score score-mid";
+      return "score score-low";
+    }
+    function strength(score) {
+      if (score >= 85) return "Strong";
+      if (score >= 70) return "Moderate";
+      if (score >= 55) return "Exploratory";
+      return "Weak";
+    }
+    function toast(message) {
+      const t = document.getElementById("toast");
+      t.textContent = message;
+      t.style.display = "block";
+      setTimeout(() => t.style.display = "none", 2200);
+    }
+
+    function loadProject() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const data = JSON.parse(saved);
+          nodes = data.nodes || clone(demoNodes);
+          edges = data.edges || clone(demoEdges);
+          selectedNodeId = nodes[0]?.id || "t2d";
+          return;
+        }
+      } catch (e) {}
+      nodes = clone(demoNodes);
+      edges = clone(demoEdges);
+    }
+
+    function saveProject() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
+      toast("Project saved in this browser.");
+    }
+
+    function clearSavedProject() {
+      if (!confirm("Clear saved browser project data?")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      toast("Saved browser data cleared.");
+    }
+
+    function resetToDemo() {
+      if (!confirm("Reset graph to demo data? Your unsaved changes will be replaced.")) return;
+      nodes = clone(demoNodes);
+      edges = clone(demoEdges);
+      selectedNodeId = "t2d";
+      selectedEdgeIndex = null;
+      highlightedPathNodeIds = new Set();
+      highlightedPathEdgeKeys = new Set();
+      currentPath = null;
+      lastReportText = "";
+      document.getElementById("report").style.display = "none";
+      document.getElementById("searchInput").value = "Type 2 Diabetes";
+      populateSelectors();
+      renderAll();
+      toast("Demo graph restored.");
+    }
+
+    function populateSelectors() {
+      const selects = ["sourceSelect", "targetSelect", "edgeSource", "edgeTarget"];
+      selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const current = el.value;
+        el.innerHTML = "";
+        nodes.forEach(n => {
+          const option = document.createElement("option");
+          option.value = n.id;
+          option.textContent = `${n.label} (${n.type})`;
+          el.appendChild(option);
+        });
+        if (nodes.some(n => n.id === current)) el.value = current;
+      });
+      if (getNode("pparg")) document.getElementById("sourceSelect").value = "pparg";
+      if (getNode("nash")) document.getElementById("targetSelect").value = "nash";
+    }
+
+    function renderStats() {
+      document.getElementById("nodeCount").textContent = nodes.length;
+      document.getElementById("edgeCount").textContent = edges.length;
+      const selected = getNode(selectedNodeId);
+      document.getElementById("selectedScore").textContent = selected ? selected.confidence : "-";
+      document.getElementById("pathScore").textContent = currentPath ? calculatePathScore(currentPath) : "-";
+      const label = document.getElementById("minScoreLabel");
+      if (label) label.textContent = minScore();
+    }
+
+    function renderEvidenceDashboard() {
+      const strong = edges.filter(e => Number(e.score) >= 85).length;
+      const moderate = edges.filter(e => Number(e.score) >= 70 && Number(e.score) < 85).length;
+      const exploratory = edges.filter(e => Number(e.score) >= 55 && Number(e.score) < 70).length;
+      const weak = edges.filter(e => Number(e.score) < 55).length;
+      const avg = edges.length ? Math.round(edges.reduce((sum, e) => sum + Number(e.score || 0), 0) / edges.length) : 0;
+
+      document.getElementById("strongCount").textContent = strong;
+      document.getElementById("moderateCount").textContent = moderate;
+      document.getElementById("exploratoryCount").textContent = exploratory;
+      document.getElementById("weakCount").textContent = weak;
+      document.getElementById("avgGraphScore").textContent = avg + "/100";
+
+      const topLinks = document.getElementById("topLinks");
+      topLinks.innerHTML = "";
+      edges
+        .map((edge, index) => ({ ...edge, index }))
+        .sort((a, b) => Number(b.score) - Number(a.score))
+        .slice(0, 5)
+        .forEach(edge => {
+          const source = getNode(edge.source);
+          const target = getNode(edge.target);
+          const item = document.createElement("div");
+          item.className = "top-link-item";
+          item.innerHTML = `
+            <b>${source?.label || "Unknown"} → ${target?.label || "Unknown"}</b><br>
+            <span class="small">${edge.relationship}</span><br>
+            <span class="${scoreClass(edge.score)}">${edge.score}/100 · ${edge.evidence}</span>
+          `;
+          item.onclick = () => {
+            selectedEdgeIndex = edge.index;
+            selectedNodeId = edge.source;
+            renderAll();
+            document.getElementById("detailPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+          };
+          topLinks.appendChild(item);
+        });
+    }
+
+    function renderFilters() {
+      const root = document.getElementById("filters");
+      root.innerHTML = "";
+      NODE_TYPES.forEach(type => {
+        const count = nodes.filter(n => n.type === type).length;
+        const btn = document.createElement("button");
+        btn.className = `filter-btn ${type} ${activeTypes.has(type) ? "active" : "inactive"}`;
+        btn.innerHTML = `<span>${type}</span><span>${count}</span>`;
+        btn.onclick = () => {
+          if (activeTypes.has(type)) activeTypes.delete(type);
+          else activeTypes.add(type);
+          if (activeTypes.size === 0) activeTypes.add(type);
+          renderAll();
+        };
+        root.appendChild(btn);
+      });
+    }
+
+    function renderGraph() {
+      const svg = document.getElementById("graph");
+      svg.innerHTML = "";
+      svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+      const selectedConnectedIds = new Set(connectedEntities().map(n => n.id));
+
+      visibleEdges().forEach(e => {
+        const s = getNode(e.source);
+        const t = getNode(e.target);
+        if (!s || !t) return;
+        const isSelected = selectedEdgeIndex === e.index;
+        const isConnected = e.source === selectedNodeId || e.target === selectedNodeId;
+        const isPathEdge = highlightedPathEdgeKeys.has(edgeKey(e.source, e.target));
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", s.x); line.setAttribute("y1", s.y);
+        line.setAttribute("x2", t.x); line.setAttribute("y2", t.y);
+        line.setAttribute("stroke", isPathEdge ? "#22c55e" : isSelected ? "#fbbf24" : isConnected ? "#a5b4fc" : "#334155");
+        line.setAttribute("stroke-width", isPathEdge ? 7 : isSelected ? 6 : isConnected ? 4 : 2.6);
+        line.setAttribute("stroke-opacity", isPathEdge || isSelected || isConnected ? 0.98 : 0.55);
+        line.classList.add("edge");
+        line.onclick = () => { selectedEdgeIndex = e.index; renderAll(); };
+        svg.appendChild(line);
+
+        const wide = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        wide.setAttribute("x1", s.x); wide.setAttribute("y1", s.y);
+        wide.setAttribute("x2", t.x); wide.setAttribute("y2", t.y);
+        wide.setAttribute("stroke", "transparent");
+        wide.setAttribute("stroke-width", 18);
+        wide.classList.add("edge");
+        wide.onclick = () => { selectedEdgeIndex = e.index; renderAll(); };
+        svg.appendChild(wide);
+
+        if (isSelected) {
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          label.setAttribute("x", (s.x + t.x) / 2);
+          label.setAttribute("y", (s.y + t.y) / 2 - 8);
+          label.setAttribute("text-anchor", "middle");
+          label.setAttribute("class", "edge-label");
+          label.textContent = e.relationship;
+          svg.appendChild(label);
+        }
+      });
+
+      visibleNodes().forEach(n => {
+        const color = typeColors[n.type] || typeColors.Mechanism;
+        const isSelected = selectedNodeId === n.id;
+        const isConnected = selectedConnectedIds.has(n.id);
+        const isPathNode = highlightedPathNodeIds.has(n.id);
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.classList.add("node");
+        group.onmousedown = (event) => startDrag(event, n.id);
+        group.onclick = () => { selectedNodeId = n.id; selectedEdgeIndex = null; renderAll(); };
+
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", n.x); circle.setAttribute("cy", n.y);
+        circle.setAttribute("r", isPathNode ? 52 : isSelected ? 48 : isConnected ? 44 : 38);
+        circle.setAttribute("fill", color.fill);
+        circle.setAttribute("stroke", isPathNode ? "#22c55e" : isSelected ? "#ffffff" : color.stroke);
+        circle.setAttribute("stroke-width", isPathNode ? 5 : isSelected ? 4 : isConnected ? 3 : 2);
+        group.appendChild(circle);
+
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", n.x); label.setAttribute("y", n.y + 4);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("class", "node-label");
+        label.textContent = n.label.length > 18 ? n.label.slice(0, 16) + "…" : n.label;
+        group.appendChild(label);
+
+        const score = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        score.setAttribute("x", n.x); score.setAttribute("y", n.y + 68);
+        score.setAttribute("text-anchor", "middle");
+        score.setAttribute("class", "node-score");
+        score.textContent = n.confidence + "%";
+        group.appendChild(score);
+
+        svg.appendChild(group);
+      });
+    }
+
+    function svgCoords(evt) {
+      const svg = document.getElementById("graph");
+      const rect = svg.getBoundingClientRect();
+      return {
+        x: viewBox.x + ((evt.clientX - rect.left) / rect.width) * viewBox.w,
+        y: viewBox.y + ((evt.clientY - rect.top) / rect.height) * viewBox.h
+      };
+    }
+
+    function startDrag(event, id) {
+      event.preventDefault();
+      dragNodeId = id;
+      const p = svgCoords(event);
+      const n = getNode(id);
+      svgPointOffset = { x: p.x - n.x, y: p.y - n.y };
+      window.addEventListener("mousemove", dragMove);
+      window.addEventListener("mouseup", dragEnd);
+    }
+
+    function dragMove(event) {
+      if (!dragNodeId) return;
+      const p = svgCoords(event);
+      const n = getNode(dragNodeId);
+      n.x = Math.max(40, Math.min(1110, p.x - svgPointOffset.x));
+      n.y = Math.max(40, Math.min(780, p.y - svgPointOffset.y));
+      renderGraph();
+    }
+
+    function dragEnd() {
+      dragNodeId = null;
+      window.removeEventListener("mousemove", dragMove);
+      window.removeEventListener("mouseup", dragEnd);
+      renderAll();
+    }
+
+    function renderDetail() {
+      const panel = document.getElementById("detailPanel");
+      if (selectedEdgeIndex !== null) {
+        const e = edges[selectedEdgeIndex];
+        if (!e) return;
+        panel.innerHTML = `
+          <span class="badge ${getNode(e.source)?.type}">${getNode(e.source)?.label}</span>
+          <span class="badge ${getNode(e.target)?.type}">${getNode(e.target)?.label}</span>
+          <p class="muted"><b>Relationship:</b> ${e.relationship}</p>
+          <br />
+          <p class="muted">${e.explanation}</p>
+          <div class="${scoreClass(e.score)}">Evidence: ${e.evidence} · ${e.score}/100</div>
+          <br />
+          <button class="danger" onclick="deleteSelectedEdge()">Delete Relationship</button>
+        `;
+        return;
+      }
+      const n = getNode(selectedNodeId);
+      if (!n) return;
+      panel.innerHTML = `
+        <h2>${n.label}</h2>
+        <span class="badge ${n.type}">${n.type}</span>
+        <div class="${scoreClass(n.confidence)}">Confidence: ${n.confidence}/100 · ${strength(n.confidence)}</div>
+        <br />
+        <p class="muted">${n.description}</p>
+        <br />
+        <p class="muted"><b>Biological relevance:</b><br>${n.relevance}</p>
+        <br />
+        <button class="danger" onclick="deleteSelectedNode()">Delete Node</button>
+      `;
+    }
+
+    function renderConnected() {
+      const panel = document.getElementById("connectedPanel");
+      panel.innerHTML = "";
+      connectedEntities().forEach(entity => {
+        const div = document.createElement("div");
+        div.className = "entity-item";
+        div.innerHTML = `<b>${entity.label}</b><br><span class="small">${entity.type} · ${entity.confidence}%</span>`;
+        div.onclick = () => { selectedNodeId = entity.id; selectedEdgeIndex = null; renderAll(); };
+        panel.appendChild(div);
+      });
+    }
+
+    function renderEvidenceTable() {
+      const tbody = document.getElementById("evidenceTable");
+      tbody.innerHTML = "";
+      connectedEdges().sort((a,b) => b.score - a.score).forEach(e => {
+        const other = getNode(e.source === selectedNodeId ? e.target : e.source);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><b>${other?.label || "Unknown"}</b><br><span class="small">${e.relationship}</span></td><td>${e.score}<br><span class="small">${e.evidence}</span></td>`;
+        tr.onclick = () => { selectedEdgeIndex = edges.indexOf(e); renderAll(); };
+        tbody.appendChild(tr);
+      });
+    }
+
+    function searchNode() {
+      const query = document.getElementById("searchInput").value.trim().toLowerCase();
+      const found = nodes.find(n => n.label.toLowerCase().includes(query) || n.id.toLowerCase().includes(query));
+      if (found) {
+        selectedNodeId = found.id;
+        selectedEdgeIndex = null;
+        document.getElementById("notice").textContent = "Focused graph on " + found.label + ".";
+      } else {
+        document.getElementById("notice").textContent = "No exact node found. Add it from Control Panel → Add Data.";
+      }
+      renderAll();
+    }
+
+    function shortestPath(startId, endId) {
+      const graph = {};
+      nodes.forEach(n => graph[n.id] = []);
+      visibleEdges().forEach(e => {
+        graph[e.source].push(e.target);
+        graph[e.target].push(e.source);
+      });
+      const queue = [[startId]];
+      const visited = new Set([startId]);
+      while (queue.length) {
+        const path = queue.shift();
+        const last = path[path.length - 1];
+        if (last === endId) return path;
+        for (const next of graph[last] || []) {
+          if (!visited.has(next)) {
+            visited.add(next);
+            queue.push([...path, next]);
+          }
+        }
+      }
+      return null;
+    }
+
+    function calculatePathScore(path) {
+      if (!path || path.length < 2) return "-";
+      let scores = [];
+      for (let i = 0; i < path.length - 1; i++) {
+        const e = edges.find(edge => edgeKey(edge.source, edge.target) === edgeKey(path[i], path[i+1]));
+        if (e) scores.push(Number(e.score));
+      }
+      if (!scores.length) return "-";
+      return Math.round(scores.reduce((a,b) => a + b, 0) / scores.length);
+    }
+
+    function findHypothesisPath() {
+      const startId = document.getElementById("sourceSelect").value;
+      const endId = document.getElementById("targetSelect").value;
+      const result = document.getElementById("pathResult");
+      if (startId === endId) {
+        result.style.display = "block";
+        result.innerHTML = "Choose two different biological entities.";
+        return;
+      }
+      const path = shortestPath(startId, endId);
+      highlightedPathNodeIds = new Set();
+      highlightedPathEdgeKeys = new Set();
+      currentPath = path;
+      if (!path) {
+        result.style.display = "block";
+        result.innerHTML = "No path found under current filters/score threshold.";
+        renderAll();
+        return;
+      }
+      path.forEach(id => highlightedPathNodeIds.add(id));
+      for (let i = 0; i < path.length - 1; i++) highlightedPathEdgeKeys.add(edgeKey(path[i], path[i+1]));
+      selectedNodeId = startId;
+      selectedEdgeIndex = null;
+      const labels = path.map(id => getNode(id).label);
+      const score = calculatePathScore(path);
+      result.style.display = "block";
+      result.innerHTML = `<b>Hypothesis Path:</b> ${labels.join(" → ")}<br><b>Path Evidence Score:</b> ${score}/100 · ${strength(score)}<br><span class="small">This path is hypothesis-generating and should not be interpreted as clinical proof.</span>`;
+      renderAll();
+    }
+
+    function clearPath() {
+      highlightedPathNodeIds = new Set();
+      highlightedPathEdgeKeys = new Set();
+      currentPath = null;
+      const result = document.getElementById("pathResult");
+      result.style.display = "none";
+      result.innerHTML = "";
+      renderAll();
+    }
+
+    function generateHypothesis() {
+      const n = getNode(selectedNodeId);
+      if (!n) return;
+      const cEdges = currentPath ? pathEdges(currentPath) : connectedEdges();
+      const related = currentPath ? currentPath.map(id => getNode(id)).filter(x => x.id !== n.id) : connectedEntities();
+      const avg = cEdges.length ? Math.round(cEdges.reduce((sum, e) => sum + Number(e.score), 0) / cEdges.length) : n.confidence;
+      const diseases = related.filter(x => x.type === "Disease").map(x => x.label);
+      const pathways = related.filter(x => x.type === "Pathway").map(x => x.label);
+      const mechanisms = related.filter(x => x.type === "Mechanism").map(x => x.label);
+      const drugs = related.filter(x => x.type === "Drug").map(x => x.label);
+      const pathText = currentPath ? currentPath.map(id => getNode(id).label).join(" → ") : cEdges.slice(0, 7).map(e => `${getNode(e.source)?.label} → ${e.relationship} → ${getNode(e.target)?.label}`).join("\n");
+
+      let title = `${n.label} as a hypothesis anchor in biological network exploration`;
+      if (currentPath && currentPath.length > 1) title = `${getNode(currentPath[0]).label} to ${getNode(currentPath[currentPath.length-1]).label}: graph-based hypothesis path`;
+      else if (n.type === "Target") title = `${n.label} as a target–disease hypothesis anchor`;
+      else if (n.type === "Disease") title = `${n.label} relationship map for target hypothesis generation`;
+      else if (n.type === "Drug") title = `${n.label}-linked mechanism hypothesis`;
+      else if (n.type === "Pathway") title = `${n.label} pathway hypothesis across connected disease biology`;
+
+      const rationale = [
+        `${n.label} is connected to ${cEdges.length} relationship(s) used in this hypothesis report.`,
+        pathways.length ? `Relevant pathway context includes ${pathways.join(", ")}.` : "",
+        mechanisms.length ? `Mechanistic context includes ${mechanisms.join(", ")}.` : "",
+        diseases.length ? `Connected disease spaces include ${diseases.join(", ")}.` : "",
+        drugs.length ? `Drug-linked context includes ${drugs.join(", ")}.` : "",
+        "This supports a hypothesis-generating, not confirmatory, interpretation."
+      ].filter(Boolean).join(" ");
+
+      const limitations = "This output is generated from the current graph evidence. It should be validated using real target-disease association data, expression datasets, pathway enrichment, literature review, and experimental or clinical evidence before any research decision.";
+      const validation = "Suggested validation: verify association strength, inspect pathway overlap, compare disease-specific omics signatures, check literature contradictions, and classify the evidence as clinical, preclinical, computational, or exploratory.";
+      const safety = avg >= 85 ? "Strong network support in this graph, but still requires external validation." : avg >= 70 ? "Moderate network support; useful for prioritization but not proof." : "Exploratory signal only; treat as speculative.";
+
+      const report = document.getElementById("report");
+      report.style.display = "block";
+      report.innerHTML = `
+        <div class="tag">Generated Hypothesis Report</div>
+        <h2>${title}</h2>
+        <div class="${scoreClass(avg)}">Hypothesis Score: ${avg}/100 · ${strength(avg)} Confidence</div>
+        <div class="report-grid">
+          <div class="report-box"><h3>Biological Rationale</h3><br><p class="muted">${rationale}</p></div>
+          <div class="report-box"><h3>Supporting Graph Evidence</h3><br><p class="muted" style="white-space:pre-line;">${pathText}</p></div>
+          <div class="report-box"><h3>Interpretation Safety</h3><br><p class="muted">${safety}</p></div>
+          <div class="report-box"><h3>Limitations</h3><br><p class="muted">${limitations}</p></div>
+          <div class="report-box"><h3>Suggested Validation</h3><br><p class="muted">${validation}</p></div>
+          <div class="report-box"><h3>Project Notes</h3><br><p class="muted">Generated by TargetGraph AI zero-install MVP using editable local graph data.</p></div>
+        </div>
+      `;
+      lastReportText = `TargetGraph AI Hypothesis Report\n\n${title}\n\nHypothesis Score: ${avg}/100 (${strength(avg)})\n\nBiological Rationale:\n${rationale}\n\nSupporting Graph Evidence:\n${pathText}\n\nInterpretation Safety:\n${safety}\n\nLimitations:\n${limitations}\n\nSuggested Validation:\n${validation}`;
+      report.scrollIntoView({ behavior: "smooth" });
+    }
+
+    function pathEdges(path) {
+      const result = [];
+      for (let i = 0; i < path.length - 1; i++) {
+        const e = edges.find(edge => edgeKey(edge.source, edge.target) === edgeKey(path[i], path[i+1]));
+        if (e) result.push(e);
+      }
+      return result;
+    }
+
+    function addNode() {
+      const label = document.getElementById("newNodeLabel").value.trim();
+      if (!label) return toast("Enter a node label.");
+      let id = normalizeId(label);
+      let counter = 2;
+      while (getNode(id)) id = normalizeId(label) + "_" + counter++;
+      const node = {
+        id,
+        label,
+        type: document.getElementById("newNodeType").value,
+        confidence: Math.max(0, Math.min(100, Number(document.getElementById("newNodeConfidence").value || 70))),
+        description: document.getElementById("newNodeDescription").value.trim() || "User-added biological entity.",
+        relevance: document.getElementById("newNodeRelevance").value.trim() || "Relevance should be validated with supporting biological evidence.",
+        x: 560 + Math.random() * 180 - 90,
+        y: 380 + Math.random() * 180 - 90
+      };
+      nodes.push(node);
+      selectedNodeId = node.id;
+      populateSelectors();
+      renderAll();
+      toast("Node added.");
+    }
+
+    function addEdge() {
+      const source = document.getElementById("edgeSource").value;
+      const target = document.getElementById("edgeTarget").value;
+      if (source === target) return toast("Choose two different nodes.");
+      const relationship = document.getElementById("newEdgeRelationship").value.trim() || "associated_with";
+      const edge = {
+        source,
+        target,
+        relationship,
+        score: Math.max(0, Math.min(100, Number(document.getElementById("newEdgeScore").value || 70))),
+        evidence: document.getElementById("newEdgeEvidence").value,
+        explanation: document.getElementById("newEdgeExplanation").value.trim() || "User-added relationship. Evidence should be validated before research use."
+      };
+      edges.push(edge);
+      selectedEdgeIndex = edges.length - 1;
+      clearPath();
+      populateSelectors();
+      renderAll();
+      toast("Relationship added.");
+    }
+
+    function deleteSelectedNode() {
+      const n = getNode(selectedNodeId);
+      if (!n || !confirm(`Delete node ${n.label} and its relationships?`)) return;
+      nodes = nodes.filter(node => node.id !== selectedNodeId);
+      edges = edges.filter(e => e.source !== selectedNodeId && e.target !== selectedNodeId);
+      selectedNodeId = nodes[0]?.id || null;
+      selectedEdgeIndex = null;
+      clearPath();
+      populateSelectors();
+      renderAll();
+      toast("Node deleted.");
+    }
+
+    function deleteSelectedEdge() {
+      if (selectedEdgeIndex === null || !edges[selectedEdgeIndex]) return;
+      if (!confirm("Delete selected relationship?")) return;
+      edges.splice(selectedEdgeIndex, 1);
+      selectedEdgeIndex = null;
+      clearPath();
+      renderAll();
+      toast("Relationship deleted.");
+    }
+
+    function exportReport() {
+      if (!lastReportText) generateHypothesis();
+      const blob = new Blob([lastReportText], { type: "text/plain" });
+      downloadBlob(blob, "targetgraph_ai_hypothesis_report.txt");
+    }
+
+    function graphJSON() { return JSON.stringify({ nodes, edges }, null, 2); }
+    function copyGraphJSON() {
+      navigator.clipboard.writeText(graphJSON()).then(() => toast("Graph JSON copied."), () => toast("Clipboard not available. Use Download JSON."));
+    }
+    function exportGraphJSON() {
+      const blob = new Blob([graphJSON()], { type: "application/json" });
+      downloadBlob(blob, "targetgraph_ai_graph.json");
+    }
+    function importGraphJSON() {
+      try {
+        const raw = document.getElementById("importJson").value.trim();
+        const data = JSON.parse(raw);
+        if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error("Invalid graph format");
+        nodes = data.nodes;
+        edges = data.edges;
+        selectedNodeId = nodes[0]?.id || null;
+        selectedEdgeIndex = null;
+        clearPath();
+        populateSelectors();
+        renderAll();
+        toast("Graph imported.");
+      } catch (e) {
+        toast("Invalid JSON. Expected { nodes: [...], edges: [...] }.");
+      }
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function zoomGraph(factor) {
+      const cx = viewBox.x + viewBox.w / 2;
+      const cy = viewBox.y + viewBox.h / 2;
+      viewBox.w *= factor;
+      viewBox.h *= factor;
+      viewBox.x = cx - viewBox.w / 2;
+      viewBox.y = cy - viewBox.h / 2;
+      renderGraph();
+    }
+    function resetView() {
+      viewBox = { x: 0, y: 0, w: 1150, h: 820 };
+      renderGraph();
+    }
+    function autoLayout() {
+      const centerX = 575, centerY = 405;
+      const radius = Math.min(340, Math.max(220, nodes.length * 13));
+      nodes.forEach((n, i) => {
+        const angle = (i / nodes.length) * Math.PI * 2 - Math.PI / 2;
+        if (n.id === selectedNodeId) { n.x = centerX; n.y = centerY; }
+        else { n.x = centerX + Math.cos(angle) * radius; n.y = centerY + Math.sin(angle) * radius; }
+      });
+      renderAll();
+      toast("Auto layout applied.");
+    }
+
+    function showLeftTab(tab) {
+      document.getElementById("filtersPanel").classList.toggle("hidden", tab !== "filters");
+      document.getElementById("addPanel").classList.toggle("hidden", tab !== "add");
+      document.getElementById("dataPanel").classList.toggle("hidden", tab !== "data");
+      document.getElementById("tabFilters").className = tab === "filters" ? "tab active-tab" : "tab secondary";
+      document.getElementById("tabAdd").className = tab === "add" ? "tab active-tab" : "tab secondary";
+      document.getElementById("tabData").className = tab === "data" ? "tab active-tab" : "tab secondary";
+    }
+
+    function renderAll() {
+      renderStats();
+      renderEvidenceDashboard();
+      renderFilters();
+      renderGraph();
+      renderDetail();
+      renderConnected();
+      renderEvidenceTable();
+    }
+
+    loadProject();
+    populateSelectors();
+    renderAll();
+  </script>
+</body>
+</html>
